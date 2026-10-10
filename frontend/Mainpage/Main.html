@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillTrack - Login / Register</title>
+    <!-- Link CSS file -->
+    <link rel="stylesheet" href="Main.css">
+</head>
+<body>
+
+    <div class="auth-container">
+        <h2>SkillTrackCommunity</h2>
+
+        <!-- Error Message  -->
+        <div class="error-box" id="errorBox">
+            Invalid username or password. Please try again.
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-buttons">
+            <button class="tab-btn active" id="loginTab">Log In</button>
+            <button class="tab-btn" id="signupTab">Sign Up</button>
+        </div>
+
+        <!-- Login Form  -->
+        <div class="input-group">
+            <label id="usernameLabel">Username</label>
+            <input type="text" id="userInput" placeholder="Type Username">
+        </div>
+
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="passInput" placeholder="Password">
+        </div>
+
+        <button class="btn-submit" id="submitBtn">Log In</button>
+
+        <a href="#" class="forgot-link" id="forgotLink">Forgot Password?</a>
+    </div>
+
+    <!-- Link JavaScript  Mainfile -->
+    <script src="Main.js"></script>
+</body>
+</html>
