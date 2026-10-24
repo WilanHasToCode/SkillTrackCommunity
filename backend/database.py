@@ -1,31 +1,29 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
+from collections.abc import AsyncIterator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+import asyncpg
+from fastapi import Request
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+
 settings = Settings()
-
 DATABASE_URL = settings.DATABASE_URL
+DATABASE_DSN = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+parts = urlsplit(DATABASE_DSN)
+query = parse_qsl(parts.query, keep_blank_values=True)
+sslmode = next((value for key, value in query if key == "sslmode"), None)
+if sslmode is not None:
+    query = [(key, value) for key, value in query if key != "sslmode"]
+    query.append(("ssl", sslmode))
+    DATABASE_DSN = urlunsplit(parts._replace(query=urlencode(query)))
 
-SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
-Base = declarative_base()
-
-async def get_db():
-    async with SessionLocal() as session:
-        try:
-            yield session
-            # If the endpoint finishes without errors, automatically save the changes
-            await session.commit()
-        except Exception:
-            # If ANY backend error or crash happens, safely undo the broken operation
-            await session.rollback()
-            raise
-        finally:
-            # Always close the session to free up your database connection slots
-            await session.close()
+async def get_db(request: Request) -> AsyncIterator[asyncpg.Connection]:
+    async with request.app.state.pool.acquire() as connection:
+        yield connection
