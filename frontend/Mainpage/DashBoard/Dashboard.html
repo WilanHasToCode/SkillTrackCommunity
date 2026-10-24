@@ -15,8 +15,8 @@
         <aside class="sidebar">
             <div class="logo">ST</div>
             <a href="Dashboard.html" class="nav-btn active">Dashboard</a>
-            <button class="nav-btn" onclick="comingSoon('Profile')">Profile</button>
-            <button class="nav-btn" onclick="comingSoon('Skills Directory')">Skills Directory</button>
+            <a href="../profiles/profiles.html" class="nav-btn">Profile</a>
+            <a href="../skills/skills.html" class="nav-btn">Skills Directory</a>
             <button class="nav-btn" onclick="logOut()">Log Out</button>
         </aside>
 
@@ -50,18 +50,19 @@
                         <button class="btn grey" onclick="closeComposer()">Cancel</button>
                     </div>
 
-                    <!-- Posts are added here by Dashboard.js -->
+                    <!-- Posts are loaded from the backend by Dashboard.js -->
                     <div id="feed"></div>
 
                     <!-- Shown when there are no posts -->
                     <div class="card" id="emptyMessage">No posts yet. Click Create Post to write the first one.</div>
+                    <div class="toast" id="toast" role="status" aria-live="polite"></div>
                 </section>
 
                 <!-- Profile card -->
                 <aside class="profile-card card">
                     <h3>Profile</h3>
                     <p id="profileName">Username</p>
-                    <button class="btn" onclick="comingSoon('Profile')">Update Profile</button>
+                    <a class="btn" href="../profiles/profiles.html">Update Profile</a>
                 </aside>
 
             </main>
@@ -87,6 +88,7 @@
     </template>
 
     <!-- Link JavaScript file -->
+    <script src="../api.js"></script>
     <script src="Dashboard.js"></script>
 </body>
 </html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillTrack - Skills Directory</title>
+    <!-- Link CSS files (Dashboard.css gives the shared layout) -->
+    <link rel="stylesheet" href="../DashBoard/Dashboard.css">
+    <link rel="stylesheet" href="skills.css">
+</head>
+<body>
+
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">ST</div>
+            <a href="../DashBoard/Dashboard.html" class="nav-btn">Dashboard</a>
+            <a href="../profiles/profiles.html" class="nav-btn">Profile</a>
+            <a href="skills.html" class="nav-btn active">Skills Directory</a>
+            <button class="nav-btn" onclick="logOut()">Log Out</button>
+        </aside>
+
+        <div class="content">
+
+            <!-- Top bar -->
+            <header class="top-bar">
+                <h1>Skills Directory</h1>
+                <div class="top-right">
+                    <div class="avatar">M</div>
+                </div>
+            </header>
+
+            <main class="main">
+
+                <!-- List of skills (added by Skills.js) -->
+                <section class="posts-area">
+                    <div id="skillList"></div>
+                </section>
+
+                <!-- Right side panels -->
+                <aside class="side-panel">
+
+                    <!-- Skill details -->
+                    <div class="card dark">
+                        <h3 id="skillName">Skill Details</h3>
+                        <p id="skillInfo">Click a skill to see its details.</p>
+                        <button class="btn full" onclick="practiceSkill()">Learn / Practice</button>
+                        <button class="btn grey full" onclick="shareSkill()">Share and post</button>
+                    </div>
+
+                    <!-- Track progress -->
+                    <div class="card">
+                        <h3>Progress</h3>
+                        <p id="overallText">Overall: 0%</p>
+                        <div class="bar"><i class="bar-fill" id="overallBar"></i></div>
+                    </div>
+
+                    <a class="btn grey full" href="../DashBoard/Dashboard.html">Return to Dashboard</a>
+                </aside>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Skill layout: JavaScript makes a copy of this for every skill -->
+    <template id="skillTemplate">
+        <div class="card skill">
+            <div class="skill-row">
+                <b class="skill-name"></b>
+                <span class="tag"></span>
+            </div>
+            <div class="bar"><i class="bar-fill"></i></div>
+        </div>
+    </template>
+
+    <!-- Link JavaScript file -->
+    <script src="skills.js"></script>
+</body>
+</html>

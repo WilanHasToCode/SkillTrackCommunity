@@ -4,6 +4,9 @@ const signupTab = document.getElementById('signupTab');
 const submitBtn = document.getElementById('submitBtn');
 const usernameLabel = document.getElementById('usernameLabel');
 const userInput = document.getElementById('userInput');
+const passInput = document.getElementById('passInput');
+const emailGroup = document.getElementById('emailGroup');
+const emailInput = document.getElementById('emailInput');
 const errorBox = document.getElementById('errorBox');
 const forgotLink = document.getElementById('forgotLink');
 
@@ -18,6 +21,7 @@ loginTab.addEventListener('click', () => {
     usernameLabel.textContent = 'Username';
     userInput.placeholder = 'Type Username';
     forgotLink.style.display = 'block';
+    emailGroup.classList.add('hidden');
     errorBox.style.display = 'none';
 });
 
@@ -30,23 +34,41 @@ signupTab.addEventListener('click', () => {
     usernameLabel.textContent = 'Create Username';
     userInput.placeholder = 'Choose a Username';
     forgotLink.style.display = 'none';
+    emailGroup.classList.remove('hidden');
     errorBox.style.display = 'none';
 });
 
-// Simulate Flowchart Decision Paths on Button Click
-submitBtn.addEventListener('click', () => {
-    const val = userInput.value.trim();
+submitBtn.addEventListener('click', async () => {
+    const username = userInput.value.trim();
+    const password = passInput.value;
+    const email = emailInput.value.trim();
 
-    if (val === "") {
-        // Trigger Error State matching flowchart loop
-        errorBox.textContent = "Please fill in this field.";
+    if (!username || !password || (!isLoginMode && !email)) {
+        errorBox.textContent = "Please enter all required account details.";
         errorBox.style.display = 'block';
-    } else {
+        return;
+    }
+
+    submitBtn.disabled = true;
+    try {
+        const account = isLoginMode
+            ? await apiRequest("/auth/login", {
+                method: "POST",
+                body: JSON.stringify({ username, password })
+            })
+            : await apiRequest("/auth/register", {
+                method: "POST",
+                body: JSON.stringify({ username, password, email })
+            });
+
         errorBox.style.display = 'none';
-        if (isLoginMode) {
-            alert("Login Successful! Moving to Dashboard (A)...");
-        } else {
-            alert("Registration Successful! Account created (1)...");
-        }
+        localStorage.setItem("currentUser", account.username);
+        localStorage.setItem("currentUserId", String(account.user_id));
+        window.location.href = "DashBoard/Dashboard.html";
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
     }
 });

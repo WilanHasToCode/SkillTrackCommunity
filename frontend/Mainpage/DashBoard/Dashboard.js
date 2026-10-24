@@ -1,23 +1,11 @@
-// Dashboard.js
-// Buttons on the dashboard page. Posts are kept in memory for now,
-// so they reset when the page is refreshed (saving comes later).
-
 // ----- Who is logged in? -----
-// If the login page saved a name, use it. Otherwise use "Member".
-var username = localStorage.getItem("currentUser");
-if (username === null) {
-    username = "Member";
-}
+var username = localStorage.getItem("currentUser") || "Member";
+var userId = Number(localStorage.getItem("currentUserId"));
 document.getElementById("profileName").textContent = "Username: " + username;
 document.getElementById("avatar").textContent = username.charAt(0).toUpperCase();
 
-// ----- The posts -----
-var posts = [
-    { id: 1, author: "Maria", time: "2 hours ago", text: "Just finished my first HTML page. Any tips for learning CSS?", likes: 3, liked: false },
-    { id: 2, author: username, time: "Yesterday", text: "Practicing JavaScript every day this week.", likes: 1, liked: false }
-];
-var nextId = 3;         // id for the next new post
-var editingId = null;   // id of the post being edited (null = writing a new post)
+var posts = [];
+var editingId = null;
 
 // Makes text safe to show on the page
 function makeSafe(text) {
@@ -53,7 +41,7 @@ function showPosts() {
         html += '<div class="card">';
         html += '<div class="post-top">';
         html += '<div class="post-avatar">' + makeSafe(post.author.charAt(0).toUpperCase()) + '</div>';
-        html += '<div><b>' + makeSafe(post.author) + '</b><div class="post-time">' + post.time + '</div></div>';
+        html += '<div><b>' + makeSafe(post.author) + '</b><div class="post-time">' + makeSafe(post.time) + '</div></div>';
         html += '</div>';
         html += '<p class="post-text">' + makeSafe(post.text) + '</p>';
         html += '<div class="post-actions">';
@@ -68,6 +56,35 @@ function showPosts() {
     }
 
     document.getElementById("feed").innerHTML = html;
+    document.getElementById("emptyMessage").className = posts.length === 0 ? "card" : "card hidden";
+}
+
+function formatPostTime(createdAt) {
+    var date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+    return date.toLocaleString();
+}
+
+function mapPost(post) {
+    return {
+        id: post.id,
+        author: post.author,
+        time: post.time || (post.created_at ? formatPostTime(post.created_at) : "Community post"),
+        text: post.text,
+        likes: 0,
+        liked: false
+    };
+}
+
+async function loadPosts() {
+    try {
+        posts = (await apiRequest("/posts")).map(mapPost);
+        showPosts();
+    } catch (error) {
+        showToast("Could not load posts: " + error.message);
+    }
 }
 
 // Finds one post using its id
@@ -77,6 +94,7 @@ function findPost(id) {
             return posts[i];
         }
     }
+    return null;
 }
 
 // ----- Buttons -----
@@ -121,7 +139,7 @@ function closeComposer() {
 }
 
 // Post / Save button
-function savePost() {
+async function savePost() {
     var text = document.getElementById("postText").value.trim();
 
     if (text === "") {
@@ -129,18 +147,37 @@ function savePost() {
         return;
     }
 
-    if (editingId !== null) {
-        findPost(editingId).text = text;        // change the old post
-        showToast("Post updated.");
-    } else {
-        // add the new post at the top of the list
-        posts.unshift({ id: nextId, author: username, time: "Just now", text: text, likes: 0, liked: false });
-        nextId = nextId + 1;
-        showToast("Posted!");
+    if (!Number.isInteger(userId) || userId < 1) {
+        showToast("Please log in again before posting.");
+        return;
     }
 
-    closeComposer();
-    showPosts();
+    var postBtn = document.getElementById("postBtn");
+    postBtn.disabled = true;
+    try {
+        var savedPost = await apiRequest(editingId === null ? "/posts" : "/posts/" + editingId, {
+            method: editingId === null ? "POST" : "PUT",
+            body: JSON.stringify({ user_id: userId, content: text })
+        });
+        if (editingId === null) {
+            savedPost.time = "Just now";
+            posts.unshift(mapPost(savedPost));
+            showToast("Posted!");
+        } else {
+            var index = posts.findIndex(function (post) { return post.id === editingId; });
+            if (index !== -1) {
+                savedPost.time = posts[index].time;
+                posts[index] = mapPost(savedPost);
+            }
+            showToast("Post updated.");
+        }
+        closeComposer();
+        showPosts();
+    } catch (error) {
+        showToast("Could not save post: " + error.message);
+    } finally {
+        postBtn.disabled = false;
+    }
 }
 
 // Bell button: removes the red dot
@@ -148,15 +185,19 @@ function clearBell() {
     document.getElementById("dot").style.display = "none";
 }
 
-// Pages that are not built yet
-function comingSoon(pageName) {
-    showToast(pageName + " page is not built yet.");
-}
-
 // Log Out: forget the user and go back to the login page
 function logOut() {
     localStorage.removeItem("currentUser");
-    window.location.href = "../Mainpage/Main.html";
+    localStorage.removeItem("currentUserId");
+    window.location.href = "../Main.html";
 }
 
-showPosts();
+// Restore a message shared from the skills page.
+var draft = sessionStorage.getItem("draft");
+if (draft !== null) {
+    sessionStorage.removeItem("draft");
+    openComposer();
+    document.getElementById("postText").value = draft;
+}
+
+loadPosts();

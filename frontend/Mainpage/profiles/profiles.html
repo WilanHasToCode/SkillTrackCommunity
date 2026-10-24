@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillTrack - My Profile</title>
+    <!-- Link CSS files (Dashboard.css gives the shared layout) -->
+    <link rel="stylesheet" href="../DashBoard/Dashboard.css">
+    <link rel="stylesheet" href="profiles.css">
+</head>
+<body>
+
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">ST</div>
+            <a href="../DashBoard/Dashboard.html" class="nav-btn">Dashboard</a>
+            <a href="profiles.html" class="nav-btn active">Profile</a>
+            <a href="../skills/skills.html" class="nav-btn">Skills Directory</a>
+            <button class="nav-btn" onclick="logOut()">Log Out</button>
+        </aside>
+
+        <div class="content">
+
+            <!-- Top bar -->
+            <header class="top-bar">
+                <h1>My Profile</h1>
+                <div class="top-right">
+                    <div class="avatar" id="avatar">M</div>
+                </div>
+            </header>
+
+            <main class="main">
+
+                <!-- Profile card -->
+                <section class="posts-area">
+                    <div class="card center-text">
+                        <div class="big-avatar" id="bigAvatar">M</div>
+                        <p><b id="profileName">Member</b></p>
+                        <p class="grey-text">Password: ••••••••</p>
+                        <button class="btn" onclick="showEditBox()">Edit Profile</button>
+                    </div>
+
+                    <!-- Message: green = updated, red = error -->
+                    <p class="msg" id="msg"></p>
+
+                    <a class="btn grey" href="../DashBoard/Dashboard.html">Return to Dashboard</a>
+                </section>
+
+                <!-- Edit box (hidden until Edit Profile is clicked) -->
+                <aside class="edit-card card hidden" id="editBox">
+                    <h3>Edit</h3>
+                    <label for="newUser">New username</label>
+                    <input id="newUser" type="text" placeholder="Type New User Name">
+                    <label for="newPass">New password</label>
+                    <input id="newPass" type="password" placeholder="Type New Password">
+                    <button class="btn" onclick="saveProfile()">Save</button>
+                    <button class="btn grey" onclick="hideEditBox()">Cancel</button>
+                </aside>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Link JavaScript file -->
+    <script src="profiles.js"></script>
+</body>
+</html>
