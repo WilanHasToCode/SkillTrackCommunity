@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
@@ -10,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     SESSION_SECRET: SecretStr = Field(min_length=32)
+    APP_ENV: Literal["development", "production"] = "development"
     SMTP_USERNAME: str | None = None
     SMTP_PASSWORD: SecretStr | None = None
     EMAIL_FROM: str | None = None

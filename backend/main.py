@@ -82,6 +82,10 @@ def create_session_token(user_id: int, expires_at: int, password_hash: str) -> s
     return f"{claims}.{signature}"
 
 
+def should_secure_session_cookie(request: Request) -> bool:
+    return settings.APP_ENV == "production" or request.url.scheme == "https"
+
+
 def set_session_cookie(
     response: Response,
     request: Request,
@@ -94,7 +98,7 @@ def set_session_cookie(
         value=create_session_token(user_id, expires_at, password_hash),
         max_age=SESSION_TTL_SECONDS,
         httponly=True,
-        secure=request.url.scheme == "https",
+        secure=should_secure_session_cookie(request),
         samesite="lax",
         path="/",
     )
@@ -294,7 +298,7 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
         httponly=True,
-        secure=request.url.scheme == "https",
+        secure=should_secure_session_cookie(request),
         samesite="lax",
         path="/",
     )
