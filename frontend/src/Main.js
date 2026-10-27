@@ -17,6 +17,11 @@ const resetMessage = document.getElementById('resetMessage');
 
 let isLoginMode = true;
 
+function showError(message) {
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+}
+
 // Switch to Login View
 loginTab.addEventListener('click', () => {
     isLoginMode = true;
@@ -87,10 +92,35 @@ submitBtn.addEventListener('click', async () => {
     const password = passInput.value;
     const email = emailInput.value.trim();
 
-    if (!username || !password || (!isLoginMode && !email)) {
-        errorBox.textContent = "Please enter all required account details.";
-        errorBox.style.display = 'block';
+    const usernameLength = Array.from(username).length;
+    const passwordLength = Array.from(password).length;
+    const emailLength = Array.from(email).length;
+
+    if (!username) {
+        showError("Please enter a username.");
         return;
+    }
+    if (usernameLength > 50) {
+        showError("Username must be 50 characters or fewer.");
+        return;
+    }
+    if (!password) {
+        showError("Please enter a password.");
+        return;
+    }
+    if (passwordLength > 128) {
+        showError("Password must be 128 characters or fewer.");
+        return;
+    }
+    if (!isLoginMode) {
+        if (emailLength < 3 || emailLength > 100) {
+            showError("Email must be between 3 and 100 characters.");
+            return;
+        }
+        if (passwordLength < 12) {
+            showError("Password must be at least 12 characters.");
+            return;
+        }
     }
 
     submitBtn.disabled = true;
