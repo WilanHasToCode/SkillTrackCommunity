@@ -38,6 +38,7 @@
                     <div class="card center-text">
                         <div class="big-avatar" id="bigAvatar">M</div>
                         <p><b id="profileName">Member</b></p>
+                        <p class="grey-text" id="profileEmail"></p>
                         <p class="grey-text">Password: ••••••••</p>
                         <button class="btn" onclick="showEditBox()">Edit Profile</button>
                     </div>
@@ -53,9 +54,11 @@
                     <h3>Edit</h3>
                     <label for="newUser">New username</label>
                     <input id="newUser" type="text" placeholder="Type New User Name">
+                    <label for="currentPass">Current password (required)</label>
+                    <input id="currentPass" type="password" placeholder="Type Current Password" autocomplete="current-password">
                     <label for="newPass">New password</label>
-                    <input id="newPass" type="password" placeholder="Type New Password">
-                    <button class="btn" onclick="saveProfile()">Save</button>
+                    <input id="newPass" type="password" placeholder="Type New Password" autocomplete="new-password">
+                    <button class="btn" id="saveProfileBtn" onclick="saveProfile()">Save</button>
                     <button class="btn grey" onclick="hideEditBox()">Cancel</button>
                 </aside>
 
@@ -64,6 +67,7 @@
     </div>
 
     <!-- Link JavaScript file -->
+    <script src="../../src/api.js"></script>
     <script src="profiles.js"></script>
 </body>
 </html>

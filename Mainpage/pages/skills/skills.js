@@ -100,7 +100,7 @@ function shareSkill() {
 function logOut() {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentUserId");
-    window.location.href = "../Main.html";
+    window.location.href = "../../Main.html";
 }
 
 // Show the skills when the page opens

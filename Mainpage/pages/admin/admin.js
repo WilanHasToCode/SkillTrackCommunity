@@ -131,7 +131,7 @@ function showView(name) {
 // Log Out button: go back to the login page
 function logOut() {
     localStorage.removeItem("currentUser");
-    window.location.href = "../Main.html";
+    window.location.href = "../../Main.html";
 }
 
 // Show everything when the page opens

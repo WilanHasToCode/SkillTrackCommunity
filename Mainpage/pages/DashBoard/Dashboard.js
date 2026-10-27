@@ -189,7 +189,7 @@ function clearBell() {
 function logOut() {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentUserId");
-    window.location.href = "../Main.html";
+    window.location.href = "../../Main.html";
 }
 
 // Restore a message shared from the skills page.

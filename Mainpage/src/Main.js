@@ -64,7 +64,7 @@ submitBtn.addEventListener('click', async () => {
         errorBox.style.display = 'none';
         localStorage.setItem("currentUser", account.username);
         localStorage.setItem("currentUserId", String(account.user_id));
-        window.location.href = "DashBoard/Dashboard.html";
+        window.location.href = "pages/DashBoard/Dashboard.html";
     } catch (error) {
         errorBox.textContent = error.message;
         errorBox.style.display = 'block';
