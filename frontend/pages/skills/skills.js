@@ -1,14 +1,4 @@
-// Skills.js
-// Progress is kept in memory only, so it resets when the page is refreshed.
-
-// ----- The list of skills (add your own here) -----
-var skills = [
-    { name: "HTML", info: "Structure web pages with markup.", progress: 0 },
-    { name: "CSS", info: "Style and lay out web pages.", progress: 0 },
-    { name: "JavaScript", info: "Add behavior to web pages.", progress: 0 },
-    { name: "Python", info: "Write scripts and build the backend.", progress: 0 },
-    { name: "PostgreSQL", info: "Store and read data in a database.", progress: 0 }
-];
+var skills = [];
 
 // Which skill is selected? -1 means none.
 var selectedIndex = -1;
@@ -31,6 +21,13 @@ function showSkills() {
     var total = 0;
 
     list.innerHTML = "";   // clear the old list
+
+    if (skills.length === 0) {
+        list.textContent = "No skills are available yet.";
+        document.getElementById("overallText").textContent = "Overall: 0%";
+        document.getElementById("overallBar").style.width = "0%";
+        return;
+    }
 
     for (var i = 0; i < skills.length; i++) {
         var skill = skills[i];
@@ -62,6 +59,9 @@ function showSkills() {
 
 // View skill details: click a skill
 function selectSkill(index) {
+    if (!skills[index]) {
+        return;
+    }
     selectedIndex = index;
     document.getElementById("skillName").textContent = skills[index].name;
     document.getElementById("skillInfo").textContent = skills[index].info;
@@ -69,18 +69,26 @@ function selectSkill(index) {
 }
 
 // Learn / Practice button: adds 10% progress (maximum 100%)
-function practiceSkill() {
-    if (selectedIndex === -1) {
+async function practiceSkill() {
+    var skill = skills[selectedIndex];
+    if (!skill) {
         alert("Click a skill first.");
         return;
     }
 
-    var skill = skills[selectedIndex];
-    skill.progress = skill.progress + 10;
-    if (skill.progress > 100) {
-        skill.progress = 100;
+    var button = document.getElementById("practiceSkillBtn");
+    button.disabled = true;
+    try {
+        var result = await apiRequest("/skills/" + skill.skill_id + "/practice", {
+            method: "POST"
+        });
+        skill.progress = result.progress;
+        showSkills();
+    } catch (error) {
+        alert("Could not save skill progress: " + error.message);
+    } finally {
+        button.disabled = false;
     }
-    showSkills();
 }
 
 // Share and post button: goes to the dashboard with the message ready to post
@@ -97,11 +105,27 @@ function shareSkill() {
 }
 
 // Log Out button: go back to the login page
-function logOut() {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("currentUserId");
-    window.location.href = "../../Main.html";
+async function logOut() {
+    try {
+        await apiLogout();
+        window.location.href = "../../Main.html";
+    } catch (error) {
+        alert("Could not log out: " + error.message);
+    }
 }
 
-// Show the skills when the page opens
-showSkills();
+async function loadSkills() {
+    try {
+        skills = await apiRequest("/skills");
+        showSkills();
+    } catch (error) {
+        if (error.status === 401) {
+            window.location.replace("../../Main.html");
+            return;
+        }
+        document.getElementById("skillList").textContent =
+            "Could not load skills: " + error.message;
+    }
+}
+
+loadSkills();

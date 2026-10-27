@@ -58,8 +58,8 @@ async function saveProfile() {
         return;
     }
 
-    if (newPassword !== "" && newPassword.length < 3) {
-        showMessage("Password must be at least 3 characters.", "err");
+    if (newPassword !== "" && newPassword.length < 12) {
+        showMessage("Password must be at least 12 characters.", "err");
         return;
     }
 
@@ -97,10 +97,13 @@ async function saveProfile() {
 }
 
 // Log Out button: go back to the login page
-function logOut() {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("currentUserId");
-    window.location.href = "../../Main.html";
+async function logOut() {
+    try {
+        await apiLogout();
+        window.location.href = "../../Main.html";
+    } catch (error) {
+        showMessage("Could not log out: " + error.message, "err");
+    }
 }
 
 loadProfile();

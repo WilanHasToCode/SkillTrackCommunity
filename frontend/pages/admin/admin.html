@@ -15,8 +15,8 @@
         <aside class="sidebar">
             <div class="logo">AD</div>
             <p class="role-label">ADMIN</p>
-            <button class="nav-btn active" id="navRequests" onclick="showView('requests')">
-                Reset Requests <span class="badge" id="badge">0</span>
+            <button class="nav-btn active" id="navUsers" onclick="showView('users')">
+                Member Accounts
             </button>
             <button class="nav-btn" id="navPosts" onclick="showView('posts')">Public Posts</button>
             <button class="nav-btn" onclick="logOut()">Log Out</button>
@@ -26,58 +26,51 @@
 
             <!-- Top bar -->
             <header class="top-bar">
-                <h1 id="pageTitle">Password Reset Requests</h1>
+                <h1 id="pageTitle">Member Accounts</h1>
                 <span class="admin-tag">Admin account</span>
             </header>
 
             <main class="main">
+                <div class="card hidden" id="adminAccessError" role="alert"></div>
 
-                <!-- View 1: password reset requests -->
-                <section id="requestsView">
-                    <div id="requestList"></div>
-                    <div class="card" id="noRequests">No reset requests.</div>
+                <section id="usersView">
+                    <div id="userList"></div>
+                    <div class="card hidden" id="noUsers">No member accounts.</div>
                 </section>
 
-                <!-- View 2: public posts the admin can remove -->
                 <section id="postsView" class="hidden">
                     <div id="postList"></div>
-                    <div class="card" id="noPosts">No public posts.</div>
+                    <div class="card hidden" id="noPosts">No public posts.</div>
                 </section>
 
             </main>
         </div>
     </div>
 
-    <!-- Request layout: JavaScript makes a copy of this for every request -->
-    <template id="requestTemplate">
+    <template id="userTemplate">
         <div class="card row">
             <div>
-                <b class="req-user"></b>
-                <div class="muted req-gmail"></div>
-                <div class="muted req-time"></div>
+                <b class="user-name"></b>
+                <div class="muted user-email"></div>
             </div>
-            <div class="row-right">
-                <span class="tag"></span>
-                <button class="btn act-btn"></button>
-            </div>
+            <span class="tag user-role"></span>
         </div>
     </template>
 
-    <!-- Post layout: JavaScript makes a copy of this for every post -->
     <template id="postTemplate">
         <div class="card">
             <div class="row">
                 <div>
                     <b class="post-author"></b>
-                    <span class="muted post-time"></span>
+                    <span class="muted post-likes"></span>
                 </div>
-                <button class="btn danger delete-btn">Remove post</button>
             </div>
             <p class="post-text"></p>
         </div>
     </template>
 
     <!-- Link JavaScript file -->
+    <script src="../../src/api.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>

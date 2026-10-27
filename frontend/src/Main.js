@@ -9,6 +9,11 @@ const emailGroup = document.getElementById('emailGroup');
 const emailInput = document.getElementById('emailInput');
 const errorBox = document.getElementById('errorBox');
 const forgotLink = document.getElementById('forgotLink');
+const resetRequestBox = document.getElementById('resetRequestBox');
+const resetEmailInput = document.getElementById('resetEmailInput');
+const requestResetBtn = document.getElementById('requestResetBtn');
+const cancelResetBtn = document.getElementById('cancelResetBtn');
+const resetMessage = document.getElementById('resetMessage');
 
 let isLoginMode = true;
 
@@ -21,6 +26,7 @@ loginTab.addEventListener('click', () => {
     usernameLabel.textContent = 'Username';
     userInput.placeholder = 'Type Username';
     forgotLink.style.display = 'block';
+    resetRequestBox.classList.add('hidden');
     emailGroup.classList.add('hidden');
     errorBox.style.display = 'none';
 });
@@ -34,8 +40,46 @@ signupTab.addEventListener('click', () => {
     usernameLabel.textContent = 'Create Username';
     userInput.placeholder = 'Choose a Username';
     forgotLink.style.display = 'none';
+    resetRequestBox.classList.add('hidden');
     emailGroup.classList.remove('hidden');
     errorBox.style.display = 'none';
+});
+
+forgotLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    resetRequestBox.classList.remove('hidden');
+    resetMessage.style.display = 'none';
+    resetEmailInput.focus();
+});
+
+cancelResetBtn.addEventListener('click', () => {
+    resetRequestBox.classList.add('hidden');
+});
+
+requestResetBtn.addEventListener('click', async () => {
+    const email = resetEmailInput.value.trim();
+    if (!email) {
+        resetMessage.textContent = "Enter the email address for your account.";
+        resetMessage.className = "error-box";
+        resetMessage.style.display = 'block';
+        return;
+    }
+
+    requestResetBtn.disabled = true;
+    try {
+        const result = await apiRequest("/auth/forgot-password", {
+            method: "POST",
+            body: JSON.stringify({ email })
+        });
+        resetMessage.textContent = result.message;
+        resetMessage.className = "error-box success";
+    } catch (error) {
+        resetMessage.textContent = error.message;
+        resetMessage.className = "error-box";
+    } finally {
+        resetMessage.style.display = 'block';
+        requestResetBtn.disabled = false;
+    }
 });
 
 submitBtn.addEventListener('click', async () => {

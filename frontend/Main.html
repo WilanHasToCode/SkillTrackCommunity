@@ -42,6 +42,14 @@
         <button class="btn-submit" id="submitBtn">Log In</button>
 
         <a href="#" class="forgot-link" id="forgotLink">Forgot Password?</a>
+
+        <div class="input-group hidden" id="resetRequestBox">
+            <label for="resetEmailInput">Account email</label>
+            <input id="resetEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
+            <button class="btn-submit" id="requestResetBtn">Send reset link</button>
+            <button class="btn-submit" id="cancelResetBtn" type="button">Back to login</button>
+            <p class="error-box" id="resetMessage" role="status" aria-live="polite"></p>
+        </div>
     </div>
 
     <!-- Link JavaScript  Mainfile -->

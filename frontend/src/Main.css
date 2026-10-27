@@ -130,6 +130,12 @@ body {
     text-align: center;
 }
 
+.error-box.success {
+    background-color: #1f3b2e;
+    border-color: #38a169;
+    color: #9ae6b4;
+}
+
 .forgot-link {
     display: block;
     text-align: center;
