@@ -24,7 +24,20 @@ function formatApiError(data) {
             "Skill not found.",
             "Post not found.",
             "Post content cannot be empty.",
-            "You can only edit your own posts."
+            "You can only edit your own posts.",
+            "Skill or module not found.",
+            "Module not found.",
+            "Skill not found.",
+            "This module is already completed.",
+            "The module assessment is not fully configured.",
+            "The active attempt has no next question.",
+            "No question is ready for this attempt step.",
+            "The question is not the expected attempt question.",
+            "This question has already been answered.",
+            "This assessment attempt is already completed.",
+            "Assessment attempt not found.",
+            "You cannot access another user's attempt.",
+            "You cannot answer another user's attempt."
         ];
         return safeMessages.includes(detail) ? detail : fallback;
     }
@@ -36,7 +49,9 @@ function formatApiError(data) {
             password: "Password",
             new_password: "Password",
             content: "Post content",
-            token: "Reset link"
+            token: "Reset link",
+            question_id: "Question",
+            selected_option: "Answer"
         };
         const messages = detail.map(function (item) {
             if (!item || !Array.isArray(item.loc) || typeof item.type !== "string") {

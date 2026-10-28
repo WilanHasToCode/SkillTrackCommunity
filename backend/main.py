@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
+from typing import Literal
 from urllib.parse import quote
 
 import asyncpg
@@ -19,12 +20,39 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from database import DATABASE_DSN, get_db, settings
+from learning_migration import initialize_learning_schema
 
 SESSION_COOKIE_NAME = "skilltrack_session"
 SESSION_TTL_SECONDS = 8 * 60 * 60
 RESET_TOKEN_TTL = timedelta(minutes=30)
 SESSION_SECRET = settings.SESSION_SECRET.get_secret_value().encode("utf-8")
 logger = logging.getLogger(__name__)
+
+SKILL_SEED = (
+    ("Sports & Physical Skills", "Basketball"),
+    ("Sports & Physical Skills", "Volleyball"),
+    ("Sports & Physical Skills", "Badminton"),
+    ("Sports & Physical Skills", "Football"),
+    ("Sports & Physical Skills", "Running and Fitness"),
+    ("Sports & Physical Skills", "Swimming"),
+    ("Sports & Physical Skills", "Martial Arts"),
+    ("Sports & Physical Skills", "Dance"),
+    ("Coding & Digital Skills", "Python Programming"),
+    ("Coding & Digital Skills", "HTML and CSS"),
+    ("Coding & Digital Skills", "JavaScript"),
+    ("Coding & Digital Skills", "Web Development"),
+    ("Coding & Digital Skills", "Graphic Design"),
+    ("Coding & Digital Skills", "Video Editing"),
+    ("Coding & Digital Skills", "Basic Computer Skills"),
+    ("Everyday & Creative Skills", "Cooking and Baking"),
+    ("Everyday & Creative Skills", "Drawing and Painting"),
+    ("Everyday & Creative Skills", "Photography"),
+    ("Everyday & Creative Skills", "Public Speaking"),
+    ("Everyday & Creative Skills", "Writing"),
+    ("Everyday & Creative Skills", "Basic Financial Literacy"),
+    ("Everyday & Creative Skills", "Gardening"),
+    ("Everyday & Creative Skills", "First Aid"),
+)
 
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
@@ -71,6 +99,80 @@ class PasswordResetCompleteRequest(BaseModel):
 
 class PostRequest(BaseModel):
     content: str = Field(min_length=1, max_length=5000)
+
+
+class ModuleSummary(BaseModel):
+    module_id: int
+    title: str
+    summary: str
+    sort_order: int
+    completed: bool
+
+
+class LessonResponse(BaseModel):
+    lesson_id: int
+    title: str
+    body: str
+    sort_order: int
+
+
+class ModuleDetailResponse(BaseModel):
+    module_id: int
+    skill_id: int
+    title: str
+    summary: str
+    sort_order: int
+    completed: bool
+    lessons: list[LessonResponse]
+
+
+class AssessmentQuestionResponse(BaseModel):
+    question_id: int
+    question_number: int
+    difficulty: Literal["beginner", "intermediate", "challenge"]
+    prompt: str
+    options: dict[str, str]
+
+
+class AssessmentAttemptResponse(BaseModel):
+    attempt_id: int
+    status: Literal["in_progress", "passed", "failed"]
+    questions_answered: int
+    correct_answers: int
+    score_percentage: int
+    current_question: AssessmentQuestionResponse | None = None
+    final_result: dict | None = None
+
+
+class AssessmentAnswerRequest(BaseModel):
+    question_id: int = Field(gt=0)
+    selected_option: Literal["a", "b", "c", "d"]
+
+
+class AssessmentAnswerResponse(BaseModel):
+    attempt_id: int
+    question_id: int
+    is_correct: bool
+    selected_option: str
+    correct_option: str
+    explanation: str
+    questions_answered: int
+    correct_answers: int
+    status: Literal["in_progress", "passed", "failed"]
+    next_question: AssessmentQuestionResponse | None = None
+    final_result: dict | None = None
+
+
+class ModuleProgressResponse(BaseModel):
+    skill_id: int
+    skill_name: str
+    module_id: int
+    completed: bool
+    completed_attempt_id: int | None
+    completed_modules: int
+    total_modules: int
+    progress: int
+    legacy_progress: int
 
 
 def create_session_token(user_id: int, expires_at: int, password_hash: str) -> str:
@@ -185,34 +287,99 @@ async def require_admin(
 async def lifespan(app: FastAPI):
     app.state.pool = await asyncpg.create_pool(DATABASE_DSN)
     async with app.state.pool.acquire() as connection:
-        await connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                user_id SERIAL PRIMARY KEY,
-                username VARCHAR(50) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                is_admin BOOLEAN NOT NULL DEFAULT FALSE
+        async with connection.transaction():
+            await connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id SERIAL PRIMARY KEY,
+                    username VARCHAR(50) NOT NULL,
+                    email VARCHAR(100) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    is_admin BOOLEAN NOT NULL DEFAULT FALSE
+                )
+                """
             )
-            """
-        )
-        await connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS posts (
-                post_id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-                title VARCHAR(150) NOT NULL,
-                content TEXT,
-                is_draft BOOLEAN NOT NULL DEFAULT TRUE
+            await connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS posts (
+                    post_id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                    title VARCHAR(150) NOT NULL,
+                    content TEXT,
+                    is_draft BOOLEAN NOT NULL DEFAULT TRUE
+                )
+                """
             )
-            """
-        )
+            await connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS skills (
+                    skill_id SERIAL PRIMARY KEY,
+                    skill_name VARCHAR(100) NOT NULL UNIQUE,
+                    category VARCHAR(50) NOT NULL DEFAULT 'Uncategorized'
+                )
+                """
+            )
+            await connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_skills (
+                    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                    skill_id INTEGER NOT NULL REFERENCES skills(skill_id) ON DELETE CASCADE,
+                    progress INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (user_id, skill_id)
+                )
+                """
+            )
+            await connection.execute(
+                """
+                ALTER TABLE skills
+                ADD COLUMN IF NOT EXISTS category VARCHAR(50)
+                """
+            )
+            await connection.execute(
+                """
+                ALTER TABLE skills
+                ALTER COLUMN category SET DEFAULT 'Uncategorized'
+                """
+            )
+            await connection.execute(
+                """
+                UPDATE skills
+                SET category = 'Uncategorized'
+                WHERE category IS NULL
+                """
+            )
+            await connection.execute(
+                """
+                ALTER TABLE skills
+                ALTER COLUMN category SET NOT NULL
+                """
+            )
+            await connection.executemany(
+                """
+                INSERT INTO skills (skill_name, category)
+                VALUES ($1, $2)
+                ON CONFLICT (skill_name)
+                DO UPDATE SET category = EXCLUDED.category
+                """,
+                [(name, category) for category, name in SKILL_SEED],
+            )
+            await initialize_learning_schema(connection)
 
     yield
     await app.state.pool.close()
 
 
 app = FastAPI(title="SkillTrack Community API", lifespan=lifespan)
+
+
+@app.exception_handler(asyncpg.PostgresError)
+async def handle_database_error(request: Request, exc: asyncpg.PostgresError):
+    logger.exception("Database operation failed.", exc_info=exc)
+    return Response(
+        status_code=500,
+        content='{"detail":"A database error occurred. Please try again."}',
+        media_type="application/json",
+    )
 
 
 @app.get("/")
@@ -526,8 +693,10 @@ async def get_skills(
 ):
     rows = await db.fetch(
         """
-        SELECT s.skill_id, s.skill_name,
-               LEAST(GREATEST(COALESCE(us.progress, 0), 0), 100) AS progress
+        SELECT s.skill_id, s.skill_name, s.category,
+               LEAST(GREATEST(COALESCE(us.progress, 0), 0), 100) AS progress,
+               LEAST(GREATEST(COALESCE(us.legacy_progress, us.progress, 0), 0), 100)
+                 AS legacy_progress
         FROM skills AS s
         LEFT JOIN user_skills AS us
           ON us.skill_id = s.skill_id AND us.user_id = $1
@@ -539,32 +708,694 @@ async def get_skills(
         {
             "skill_id": row["skill_id"],
             "name": row["skill_name"],
+            "category": row["category"],
             "progress": row["progress"],
+            "legacy_progress": row["legacy_progress"],
         }
         for row in rows
     ]
 
 
-@app.post("/skills/{skill_id}/practice")
+def learning_question_response(row: asyncpg.Record) -> dict:
+    return {
+        "question_id": row["question_id"],
+        "question_number": row["question_number"],
+        "difficulty": row["difficulty"],
+        "prompt": row["prompt"],
+        "options": {
+            "a": row["option_a"],
+            "b": row["option_b"],
+            "c": row["option_c"],
+            "d": row["option_d"],
+        },
+    }
+
+
+async def require_skill_module(
+    db: asyncpg.Connection,
+    skill_id: int,
+    module_id: int,
+) -> asyncpg.Record:
+    module = await db.fetchrow(
+        """
+        SELECT s.skill_id, s.skill_name, m.module_id, m.title, m.summary, m.sort_order
+        FROM skill_modules AS m
+        JOIN skills AS s ON s.skill_id = m.skill_id
+        WHERE s.skill_id = $1 AND m.module_id = $2
+        """,
+        skill_id,
+        module_id,
+    )
+    if module is None:
+        raise HTTPException(status_code=404, detail="Skill or module not found.")
+    return module
+
+
+async def select_attempt_question(
+    db: asyncpg.Connection,
+    attempt_id: int,
+    module_id: int,
+    question_number: int,
+    difficulty: Literal["beginner", "intermediate", "challenge"],
+) -> asyncpg.Record:
+    question = await db.fetchrow(
+        """
+        SELECT q.question_id, q.question_number, q.difficulty, q.prompt,
+               q.option_a, q.option_b, q.option_c, q.option_d
+        FROM assessment_questions AS q
+        WHERE q.module_id = $1
+          AND q.is_active = TRUE
+          AND q.difficulty = $2
+        ORDER BY q.question_number
+        LIMIT 1
+        """,
+        module_id,
+        difficulty,
+    )
+    if question is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No unused question is available for this assessment step.",
+        )
+    await db.execute(
+        """
+        INSERT INTO assessment_attempt_questions (
+            attempt_id, question_number, question_id, difficulty
+        )
+        VALUES ($1, $2, $3, $4)
+        """,
+        attempt_id,
+        question_number,
+        question["question_id"],
+        difficulty,
+    )
+    return question
+
+
+async def current_attempt_question(
+    db: asyncpg.Connection,
+    attempt_id: int,
+    question_number: int,
+) -> asyncpg.Record | None:
+    row = await db.fetchrow(
+        """
+        SELECT aq.question_number, aq.difficulty,
+               q.question_id, q.prompt, q.option_a, q.option_b,
+               q.option_c, q.option_d
+        FROM assessment_attempt_questions AS aq
+        JOIN assessment_questions AS q ON q.question_id = aq.question_id
+        WHERE aq.attempt_id = $1 AND aq.question_number = $2
+        """,
+        attempt_id,
+        question_number,
+    )
+    return row
+
+
+async def load_attempt_result(db: asyncpg.Connection, attempt_id: int) -> dict:
+    attempt = await db.fetchrow(
+        """
+        SELECT status, questions_answered, correct_answers, score_percentage
+        FROM assessment_attempts
+        WHERE attempt_id = $1
+        """,
+        attempt_id,
+    )
+    if attempt is None:
+        raise HTTPException(status_code=404, detail="Assessment attempt not found.")
+    return {
+        "passed": attempt["status"] == "passed",
+        "correct_answers": attempt["correct_answers"],
+        "questions_answered": attempt["questions_answered"],
+        "total_questions": 5,
+        "score_percentage": attempt["score_percentage"],
+        "passing_score": 80,
+        "message": (
+            "Module passed. Your completion has been recorded."
+            if attempt["status"] == "passed"
+            else "The assessment was not passed. You can retry."
+        ),
+    }
+
+
+@app.get("/skills/{skill_id}/modules", response_model=list[ModuleSummary])
+async def list_learning_modules(
+    skill_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    skill = await db.fetchrow("SELECT skill_id FROM skills WHERE skill_id = $1", skill_id)
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found.")
+    rows = await db.fetch(
+        """
+        SELECT m.module_id, m.title, m.summary, m.sort_order,
+               EXISTS (
+                   SELECT 1 FROM module_completions AS c
+                   WHERE c.module_id = m.module_id AND c.user_id = $1
+               ) AS completed
+        FROM skill_modules AS m
+        WHERE m.skill_id = $2
+        ORDER BY m.sort_order
+        """,
+        current_user["user_id"],
+        skill_id,
+    )
+    return [dict(row) for row in rows]
+
+
+@app.get("/skills/{skill_id}/modules/{module_id}", response_model=ModuleDetailResponse)
+async def get_learning_module(
+    skill_id: int,
+    module_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    module = await require_skill_module(db, skill_id, module_id)
+    lessons = await db.fetch(
+        """
+        SELECT lesson_id, title, body, sort_order
+        FROM learning_lessons
+        WHERE module_id = $1
+        ORDER BY sort_order
+        """,
+        module_id,
+    )
+    completed = await db.fetchval(
+        """
+        SELECT EXISTS (
+            SELECT 1 FROM module_completions
+            WHERE user_id = $1 AND module_id = $2
+        )
+        """,
+        current_user["user_id"],
+        module_id,
+    )
+    return {
+        "module_id": module["module_id"],
+        "skill_id": module["skill_id"],
+        "title": module["title"],
+        "summary": module["summary"],
+        "sort_order": module["sort_order"],
+        "completed": completed,
+        "lessons": [dict(row) for row in lessons],
+    }
+
+
+@app.post(
+    "/skills/{skill_id}/modules/{module_id}/assessment",
+    response_model=AssessmentAttemptResponse,
+)
+async def start_or_resume_assessment(
+    skill_id: int,
+    module_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    await require_skill_module(db, skill_id, module_id)
+    async with db.transaction():
+        await db.execute(
+            "SELECT pg_advisory_xact_lock($1, $2)",
+            current_user["user_id"],
+            module_id,
+        )
+        completed = await db.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM module_completions
+                WHERE user_id = $1 AND module_id = $2
+            )
+            """,
+            current_user["user_id"],
+            module_id,
+        )
+        if completed:
+            raise HTTPException(
+                status_code=409,
+                detail="This module is already completed.",
+            )
+        attempt = await db.fetchrow(
+            """
+            SELECT attempt_id, status, questions_answered, correct_answers,
+                   score_percentage, current_difficulty
+            FROM assessment_attempts
+            WHERE user_id = $1 AND module_id = $2 AND status = 'in_progress'
+            """,
+            current_user["user_id"],
+            module_id,
+        )
+        if attempt is None:
+            attempt = await db.fetchrow(
+                """
+                INSERT INTO assessment_attempts (
+                    user_id, module_id, status, current_difficulty
+                )
+                VALUES ($1, $2, 'in_progress', 'beginner')
+                RETURNING attempt_id, status, questions_answered, correct_answers,
+                          score_percentage, current_difficulty
+                """,
+                current_user["user_id"],
+                module_id,
+            )
+            beginner_questions = await db.fetch(
+                """
+                SELECT question_id
+                FROM assessment_questions
+                WHERE module_id = $1 AND difficulty = 'beginner' AND is_active
+                ORDER BY question_number
+                LIMIT 2
+                """,
+                module_id,
+            )
+            challenge = await db.fetchrow(
+                """
+                SELECT question_id
+                FROM assessment_questions
+                WHERE module_id = $1 AND difficulty = 'challenge' AND is_active
+                ORDER BY question_number
+                LIMIT 1
+                """,
+                module_id,
+            )
+            if len(beginner_questions) != 2 or challenge is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The module assessment is not fully configured.",
+                )
+            await db.executemany(
+                """
+                INSERT INTO assessment_attempt_questions (
+                    attempt_id, question_number, question_id, difficulty
+                )
+                VALUES ($1, $2, $3, $4)
+                """,
+                [
+                    (attempt["attempt_id"], 1, beginner_questions[0]["question_id"], "beginner"),
+                    (attempt["attempt_id"], 2, beginner_questions[1]["question_id"], "beginner"),
+                    (attempt["attempt_id"], 5, challenge["question_id"], "challenge"),
+                ],
+            )
+        next_number = attempt["questions_answered"] + 1
+        question = await current_attempt_question(
+            db, attempt["attempt_id"], next_number
+        )
+        if question is None:
+            raise HTTPException(
+                status_code=409,
+                detail="The active attempt has no next question.",
+            )
+    return {
+        "attempt_id": attempt["attempt_id"],
+        "status": attempt["status"],
+        "questions_answered": attempt["questions_answered"],
+        "correct_answers": attempt["correct_answers"],
+        "score_percentage": attempt["score_percentage"],
+        "current_question": learning_question_response(question),
+        "final_result": None,
+    }
+
+
+@app.get(
+    "/skills/{skill_id}/modules/{module_id}/assessment/{attempt_id}",
+    response_model=AssessmentAttemptResponse,
+)
+async def get_assessment_attempt(
+    skill_id: int,
+    module_id: int,
+    attempt_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    await require_skill_module(db, skill_id, module_id)
+    attempt = await db.fetchrow(
+        """
+        SELECT attempt_id, user_id, module_id, status, questions_answered,
+               correct_answers, score_percentage
+        FROM assessment_attempts
+        WHERE attempt_id = $1
+        """,
+        attempt_id,
+    )
+    if attempt is None:
+        raise HTTPException(status_code=404, detail="Assessment attempt not found.")
+    if attempt["user_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="You cannot access another user's attempt.")
+    if attempt["module_id"] != module_id:
+        raise HTTPException(status_code=404, detail="Assessment attempt not found for this module.")
+    response = {
+        "attempt_id": attempt["attempt_id"],
+        "status": attempt["status"],
+        "questions_answered": attempt["questions_answered"],
+        "correct_answers": attempt["correct_answers"],
+        "score_percentage": attempt["score_percentage"],
+        "current_question": None,
+        "final_result": None,
+    }
+    if attempt["status"] == "in_progress":
+        question = await current_attempt_question(
+            db, attempt_id, attempt["questions_answered"] + 1
+        )
+        if question is not None:
+            response["current_question"] = learning_question_response(question)
+    else:
+        response["final_result"] = await load_attempt_result(db, attempt_id)
+    return response
+
+
+@app.post(
+    "/skills/{skill_id}/modules/{module_id}/assessment/{attempt_id}/answers",
+    response_model=AssessmentAnswerResponse,
+)
+async def submit_assessment_answer(
+    skill_id: int,
+    module_id: int,
+    attempt_id: int,
+    payload: AssessmentAnswerRequest,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    await require_skill_module(db, skill_id, module_id)
+    async with db.transaction():
+        attempt = await db.fetchrow(
+            """
+            SELECT attempt_id, user_id, module_id, status, questions_answered,
+                   correct_answers, score_percentage
+            FROM assessment_attempts
+            WHERE attempt_id = $1
+            FOR UPDATE
+            """,
+            attempt_id,
+        )
+        if attempt is None:
+            raise HTTPException(status_code=404, detail="Assessment attempt not found.")
+        if attempt["user_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=403, detail="You cannot answer another user's attempt.")
+        if attempt["module_id"] != module_id:
+            raise HTTPException(status_code=404, detail="Assessment attempt not found for this module.")
+        if attempt["status"] != "in_progress":
+            raise HTTPException(status_code=409, detail="This assessment attempt is already completed.")
+
+        next_number = attempt["questions_answered"] + 1
+        planned = await db.fetchrow(
+            """
+            SELECT aq.question_number, aq.difficulty,
+                   q.question_id, q.prompt, q.option_a, q.option_b,
+                   q.option_c, q.option_d, q.correct_option, q.explanation
+            FROM assessment_attempt_questions AS aq
+            JOIN assessment_questions AS q ON q.question_id = aq.question_id
+            WHERE aq.attempt_id = $1 AND aq.question_number = $2
+            """,
+            attempt_id,
+            next_number,
+        )
+        if planned is None:
+            raise HTTPException(status_code=409, detail="No question is ready for this attempt step.")
+        if planned["question_id"] != payload.question_id:
+            raise HTTPException(status_code=409, detail="The question is not the expected attempt question.")
+
+        is_correct = payload.selected_option == planned["correct_option"]
+        inserted = await db.fetchrow(
+            """
+            INSERT INTO assessment_attempt_answers (
+                attempt_id, question_number, question_id, selected_option, is_correct
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (attempt_id, question_number) DO NOTHING
+            RETURNING selected_option
+            """,
+            attempt_id,
+            next_number,
+            payload.question_id,
+            payload.selected_option,
+            is_correct,
+        )
+        if inserted is None:
+            raise HTTPException(status_code=409, detail="This question has already been answered.")
+
+        questions_answered = next_number
+        correct_answers = attempt["correct_answers"] + int(is_correct)
+        score_percentage = round(correct_answers * 100 / 5)
+        next_question = None
+        final_result = None
+
+        if questions_answered == 1:
+            next_question = await current_attempt_question(db, attempt_id, 2)
+        elif questions_answered == 2:
+            next_difficulty = (
+                "intermediate"
+                if await db.fetchval(
+                    """
+                    SELECT coalesce(sum(a.is_correct::int), 0) * 100
+                           >= (count(*) * 80)
+                    FROM assessment_attempt_answers AS a
+                    JOIN assessment_attempt_questions AS aq
+                      ON aq.attempt_id = a.attempt_id
+                     AND aq.question_id = a.question_id
+                    WHERE a.attempt_id = $1 AND aq.question_number <= 2
+                    """,
+                    attempt_id,
+                )
+                else "beginner"
+            )
+            next_question = await select_attempt_question(
+                db, attempt_id, module_id, 3, next_difficulty
+            )
+        elif questions_answered == 3:
+            next_difficulty = (
+                "intermediate"
+                if await db.fetchval(
+                    """
+                    SELECT coalesce(sum(a.is_correct::int), 0) * 100
+                           >= (count(*) * 80)
+                    FROM assessment_attempt_answers AS a
+                    JOIN assessment_attempt_questions AS aq
+                      ON aq.attempt_id = a.attempt_id
+                     AND aq.question_id = a.question_id
+                    WHERE a.attempt_id = $1 AND aq.question_number <= 3
+                    """,
+                    attempt_id,
+                )
+                else "beginner"
+            )
+            next_question = await select_attempt_question(
+                db, attempt_id, module_id, 4, next_difficulty
+            )
+        elif questions_answered == 4:
+            next_difficulty = (
+                "challenge"
+                if await db.fetchval(
+                    """
+                    SELECT coalesce(sum(a.is_correct::int), 0) * 100
+                           >= (count(*) * 80)
+                    FROM assessment_attempt_answers AS a
+                    JOIN assessment_attempt_questions AS aq
+                      ON aq.attempt_id = a.attempt_id
+                     AND aq.question_id = a.question_id
+                    WHERE a.attempt_id = $1 AND aq.question_number <= 4
+                    """,
+                    attempt_id,
+                )
+                else "intermediate"
+            )
+            if next_difficulty == "challenge":
+                await db.execute(
+                    "UPDATE assessment_attempt_questions SET difficulty = 'challenge' WHERE attempt_id = $1 AND question_number = 5",
+                    attempt_id,
+                )
+            else:
+                await db.execute(
+                    "DELETE FROM assessment_attempt_questions WHERE attempt_id = $1 AND question_number = 5",
+                    attempt_id,
+                )
+                next_question = await select_attempt_question(
+                    db, attempt_id, module_id, 5, next_difficulty
+                )
+            next_question = await current_attempt_question(db, attempt_id, 5)
+
+        status = "in_progress"
+        if questions_answered == 5:
+            status = "passed" if correct_answers >= 4 else "failed"
+            await db.execute(
+                """
+                UPDATE assessment_attempts
+                SET questions_answered = $1,
+                    correct_answers = $2,
+                    score_percentage = $3,
+                    status = $4,
+                    current_difficulty = $5,
+                    completed_at = now()
+                WHERE attempt_id = $6
+                """,
+                questions_answered,
+                correct_answers,
+                score_percentage,
+                status,
+                planned["difficulty"],
+                attempt_id,
+            )
+            if status == "passed":
+                await db.execute(
+                    """
+                    INSERT INTO module_completions (
+                        user_id, module_id, completed_attempt_id
+                    )
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (user_id, module_id) DO NOTHING
+                    """,
+                    current_user["user_id"],
+                    module_id,
+                    attempt_id,
+                )
+                totals = await db.fetchrow(
+                    """
+                    SELECT (
+                        SELECT count(*)
+                        FROM skill_modules AS all_modules
+                        WHERE all_modules.skill_id = skill.skill_id
+                    ) AS total_modules,
+                    (
+                        SELECT count(*)
+                        FROM module_completions AS completion
+                        JOIN skill_modules AS completed_module
+                          ON completed_module.module_id = completion.module_id
+                        WHERE completion.user_id = $1
+                          AND completed_module.skill_id = skill.skill_id
+                    ) AS completed_modules
+                    FROM skills AS skill
+                    WHERE skill.skill_id = $2
+                    """,
+                    current_user["user_id"],
+                    skill_id,
+                )
+                module_progress = round(
+                    totals["completed_modules"] * 100 / totals["total_modules"]
+                )
+                await db.execute(
+                    """
+                    INSERT INTO user_skills (user_id, skill_id, progress)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (user_id, skill_id)
+                    DO UPDATE SET progress = EXCLUDED.progress
+                    """,
+                    current_user["user_id"],
+                    skill_id,
+                    module_progress,
+                )
+            final_result = await load_attempt_result(db, attempt_id)
+        else:
+            await db.execute(
+                """
+                UPDATE assessment_attempts
+                SET questions_answered = $1,
+                    correct_answers = $2,
+                    score_percentage = $3,
+                    current_difficulty = $4
+                WHERE attempt_id = $5
+                """,
+                questions_answered,
+                correct_answers,
+                score_percentage,
+                next_question["difficulty"] if next_question is not None else planned["difficulty"],
+                attempt_id,
+            )
+
+    return {
+        "attempt_id": attempt_id,
+        "question_id": payload.question_id,
+        "is_correct": is_correct,
+        "selected_option": payload.selected_option,
+        "correct_option": planned["correct_option"],
+        "explanation": planned["explanation"],
+        "questions_answered": questions_answered,
+        "correct_answers": correct_answers,
+        "status": status,
+        "next_question": (
+            learning_question_response(next_question)
+            if next_question is not None
+            else None
+        ),
+        "final_result": final_result,
+    }
+
+
+@app.get(
+    "/skills/{skill_id}/modules/{module_id}/progress",
+    response_model=ModuleProgressResponse,
+)
+async def get_module_progress(
+    skill_id: int,
+    module_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    module = await require_skill_module(db, skill_id, module_id)
+    completion = await db.fetchrow(
+        """
+        SELECT completed_attempt_id
+        FROM module_completions
+        WHERE user_id = $1 AND module_id = $2
+        """,
+        current_user["user_id"],
+        module_id,
+    )
+    totals = await db.fetchrow(
+        """
+        SELECT (
+                 SELECT count(*) FROM skill_modules WHERE skill_id = $1
+               ) AS total_modules,
+               (
+                 SELECT count(*) FROM module_completions AS c
+                 JOIN skill_modules AS m ON m.module_id = c.module_id
+                 WHERE c.user_id = $2 AND m.skill_id = $1
+               ) AS completed_modules
+        """,
+        skill_id,
+        current_user["user_id"],
+    )
+    legacy = await db.fetchval(
+        """
+        SELECT coalesce(legacy_progress, progress, 0)
+        FROM user_skills
+        WHERE user_id = $1 AND skill_id = $2
+        """,
+        current_user["user_id"],
+        skill_id,
+    )
+    completed_modules = totals["completed_modules"]
+    total_modules = totals["total_modules"]
+    return {
+        "skill_id": skill_id,
+        "skill_name": module["skill_name"],
+        "module_id": module_id,
+        "completed": completion is not None,
+        "completed_attempt_id": (
+            completion["completed_attempt_id"] if completion is not None else None
+        ),
+        "completed_modules": completed_modules,
+        "total_modules": total_modules,
+        "progress": round(completed_modules * 100 / total_modules),
+        "legacy_progress": legacy or 0,
+    }
+
+
+@app.post(
+    "/skills/{skill_id}/practice",
+    status_code=410,
+    responses={410: {"description": "Legacy practice endpoint retired"}},
+)
 async def practice_skill(
     skill_id: int,
     db: asyncpg.Connection = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    row = await db.fetchrow(
-        """
-        INSERT INTO user_skills (user_id, skill_id, progress)
-        SELECT $1, skill_id, 10 FROM skills WHERE skill_id = $2
-        ON CONFLICT (user_id, skill_id)
-        DO UPDATE SET progress = LEAST(user_skills.progress + 10, 100)
-        RETURNING progress
-        """,
-        current_user["user_id"],
-        skill_id,
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "This endpoint is retired. Use the module assessment workflow: "
+            "POST /skills/{skill_id}/modules/{module_id}/assessment"
+            " and submit answers through its answer endpoint."
+        ),
     )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Skill not found.")
-    return {"skill_id": skill_id, "progress": row["progress"]}
 
 
 @app.get("/posts")

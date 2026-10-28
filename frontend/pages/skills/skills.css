@@ -1,6 +1,10 @@
 /* Skills.css - only the parts that are special to the Skills page */
 
 .side-panel { width: 250px; }
+.skill-category { margin-bottom: 24px; }
+.category-name { margin: 0 0 10px; color: #243447; }
+.category-skills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.category-skills .card { margin-bottom: 0; }
 
 .skill { cursor: pointer; border: 2px solid transparent; }
 .skill:hover { border-color: #cbd5e1; }
@@ -19,4 +23,58 @@
 
 @media (max-width: 800px) {
     .side-panel { width: 100%; }
+    .category-skills { grid-template-columns: 1fr; }
+}
+
+/* Learning workspace */
+.learning-workspace {
+    margin-top: 24px;
+    padding: 22px;
+    background: #fff;
+    border: 1px solid #dce3ea;
+    border-radius: 8px;
+}
+.learning-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.learning-heading h2 { margin: 3px 0 6px; }
+.learning-heading p { margin: 0; }
+.learning-heading .btn { width: auto; margin: 0; }
+.eyebrow { color: #4a7aa8; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.learning-message { min-height: 20px; color: #9f3a38; margin: 12px 0; }
+.learning-message.success { color: #27733a; }
+.module-list { display: grid; gap: 10px; }
+.module-card { padding: 14px; border: 1px solid #dce3ea; border-radius: 6px; }
+.module-card-header { display: flex; justify-content: space-between; gap: 12px; }
+.module-card h3 { margin: 0 0 6px; }
+.module-card p { margin: 6px 0 12px; color: #52616f; }
+.module-card .btn { width: auto; margin: 0 8px 0 0; }
+.status-complete { color: #27733a; }
+.status-open { color: #52616f; }
+.module-view, .assessment-view { margin-top: 18px; padding-top: 18px; border-top: 1px solid #dce3ea; }
+.lesson-meta { color: #52616f; }
+.lesson-body { line-height: 1.65; white-space: pre-wrap; }
+.lesson-navigation { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.lesson-navigation .btn { width: auto; }
+.question-card { padding: 18px; border: 1px solid #dce3ea; border-radius: 6px; }
+.question-card h3 { margin-top: 4px; }
+.difficulty { display: inline-block; font-size: 12px; font-weight: 700; color: #4a7aa8; }
+.answer-option { display: flex !important; align-items: flex-start; gap: 10px; width: 100%; margin: 8px 0; padding: 12px !important; text-align: left; background: #fff; color: #243447; border: 1px solid #bcc7d1; }
+.answer-option:hover, .answer-option:focus-visible { background: #edf4fa; border-color: #4a7aa8; }
+.answer-option input { margin-top: 3px; }
+.answer-option span { line-height: 1.35; }
+.answer-actions { display: flex; align-items: center; gap: 12px; }
+.answer-actions .btn { width: auto; }
+.answer-feedback { margin: 14px 0 0; padding: 12px; border-radius: 5px; background: #edf4fa; }
+.answer-feedback.correct { background: #edf8ef; color: #27733a; }
+.answer-feedback.incorrect { background: #fff2ed; color: #9f3a38; }
+.assessment-result { padding: 16px; background: #edf4fa; border-radius: 6px; }
+.assessment-result.passed { background: #edf8ef; }
+.assessment-result.failed { background: #fff2ed; }
+.assessment-result h3 { margin-top: 0; }
+.loading, .empty-state { color: #52616f; padding: 12px 0; }
+button:disabled { cursor: wait; opacity: .65; }
+
+@media (max-width: 800px) {
+    .learning-heading, .module-card-header, .lesson-navigation { flex-direction: column; }
+    .learning-heading .btn, .module-card .btn, .lesson-navigation .btn { width: 100%; }
+    .answer-actions { align-items: stretch; flex-direction: column; }
 }

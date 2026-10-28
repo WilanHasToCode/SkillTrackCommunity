@@ -33,9 +33,24 @@
 
             <main class="main">
 
-                <!-- List of skills (added by Skills.js) -->
+                <!-- List of skills (added by skills.js) -->
                 <section class="posts-area">
                     <div id="skillList"></div>
+
+                    <section class="learning-workspace" id="learningWorkspace" hidden aria-live="polite">
+                        <div class="learning-heading">
+                            <div>
+                                <p class="eyebrow">Learn</p>
+                                <h2 id="learningTitle"></h2>
+                                <p id="learningProgress"></p>
+                            </div>
+                            <button type="button" class="btn grey" id="closeLearningBtn">Back to skills</button>
+                        </div>
+                        <div id="learningMessage" class="learning-message" role="status"></div>
+                        <div id="moduleList" class="module-list"></div>
+                        <article id="moduleView" class="module-view" hidden></article>
+                        <section id="assessmentView" class="assessment-view" hidden></section>
+                    </section>
                 </section>
 
                 <!-- Right side panels -->
@@ -65,6 +80,13 @@
 
     <!-- Skill layout: JavaScript makes a copy of this for every skill -->
     <template id="skillTemplate">
+        <section class="skill-category">
+            <h2 class="category-name"></h2>
+            <div class="category-skills"></div>
+        </section>
+    </template>
+
+    <template id="skillCardTemplate">
         <div class="card skill">
             <div class="skill-row">
                 <b class="skill-name"></b>
