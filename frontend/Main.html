@@ -9,48 +9,59 @@
 </head>
 <body>
 
-    <div class="auth-container">
-        <h2>SkillTrackCommunity</h2>
+    <main class="auth-container">
+        <section class="auth-brand" aria-label="SkillTrackCommunity">
+            <div>
+                <div class="brand-mark" aria-hidden="true">ST</div>
+                <h1>Build skills.<br>Find your people.</h1>
+                <p>Learn together, share progress, and turn curiosity into practical skills.</p>
+            </div>
+        </section>
 
-        <!-- Error Message  -->
-        <div class="error-box" id="errorBox">
-            Invalid username or password. Please try again.
-        </div>
+        <section class="auth-form">
+            <h2>Welcome back</h2>
+            <p class="auth-subtitle" id="authSubtitle">Your learning community is ready.</p>
 
-        <!-- Tabs -->
-        <div class="tab-buttons">
-            <button class="tab-btn active" id="loginTab">Log In</button>
-            <button class="tab-btn" id="signupTab">Sign Up</button>
-        </div>
+            <!-- Error Message  -->
+            <div class="error-box" id="errorBox" role="alert">
+                Invalid username or password. Please try again.
+            </div>
 
-        <!-- Login Form  -->
-        <div class="input-group">
-            <label id="usernameLabel">Username</label>
-            <input type="text" id="userInput" placeholder="Type Username">
-        </div>
+            <!-- Tabs -->
+            <div class="tab-buttons" aria-label="Account actions">
+                <button class="tab-btn active" id="loginTab" type="button">Log In</button>
+                <button class="tab-btn" id="signupTab" type="button">Sign Up</button>
+            </div>
 
-        <div class="input-group hidden" id="emailGroup">
-            <label for="emailInput">Email</label>
-            <input type="email" id="emailInput" placeholder="you@example.com">
-        </div>
+            <!-- Login Form  -->
+            <div class="input-group">
+                <label id="usernameLabel" for="userInput">Username</label>
+                <input type="text" id="userInput" placeholder="Type Username" autocomplete="username">
+            </div>
 
-        <div class="input-group">
-            <label for="passInput">Password</label>
-            <input type="password" id="passInput" placeholder="Password">
-        </div>
+            <div class="input-group hidden" id="emailGroup">
+                <label for="emailInput">Email</label>
+                <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+            </div>
 
-        <button class="btn-submit" id="submitBtn">Log In</button>
+            <div class="input-group">
+                <label for="passInput">Password</label>
+                <input type="password" id="passInput" placeholder="Password" autocomplete="current-password">
+            </div>
 
-        <a href="#" class="forgot-link" id="forgotLink">Forgot Password?</a>
+            <button class="btn-submit" id="submitBtn" type="button">Log In</button>
 
-        <div class="input-group hidden" id="resetRequestBox">
-            <label for="resetEmailInput">Account email</label>
-            <input id="resetEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
-            <button class="btn-submit" id="requestResetBtn">Send reset link</button>
-            <button class="btn-submit" id="cancelResetBtn" type="button">Back to login</button>
-            <p class="error-box" id="resetMessage" role="status" aria-live="polite"></p>
-        </div>
-    </div>
+            <a href="#" class="forgot-link" id="forgotLink">Forgot Password?</a>
+
+            <div class="input-group hidden" id="resetRequestBox">
+                <label for="resetEmailInput">Account email</label>
+                <input id="resetEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
+                <button class="btn-submit" id="requestResetBtn" type="button">Send reset link</button>
+                <button class="btn-submit" id="cancelResetBtn" type="button">Back to login</button>
+                <p class="error-box" id="resetMessage" role="status" aria-live="polite"></p>
+            </div>
+        </section>
+    </main>
 
     <!-- Link JavaScript  Mainfile -->
     <script src="src/api.js"></script>
