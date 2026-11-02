@@ -16,6 +16,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible {
     outline-offset: 2px;
 }
 .hidden { display: none; }
+#adminNav[hidden] { display: none !important; }
 
 /* ----- Layout: sidebar + content ----- */
 .layout { display: flex; min-height: 100vh; }

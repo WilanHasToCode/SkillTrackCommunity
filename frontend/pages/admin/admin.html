@@ -27,7 +27,10 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <h1 id="pageTitle">Member Accounts</h1>
-                <span class="admin-tag">Admin account</span>
+                <div class="top-actions">
+                    <a class="btn back-dashboard" href="../DashBoard/Dashboard.html">Back to Dashboard</a>
+                    <span class="admin-tag">Admin account</span>
+                </div>
             </header>
 
             <main class="main">
@@ -43,6 +46,28 @@
                     <div class="card hidden" id="noPosts">No public posts.</div>
                 </section>
 
+                <section id="userDetailView" class="hidden" aria-labelledby="userDetailTitle">
+                    <div class="card detail-card">
+                        <button type="button" class="btn back-btn" onclick="showView('users')">Back to Users</button>
+                        <h2 id="userDetailTitle">Member Details</h2>
+                        <dl class="detail-fields">
+                            <div><dt>Username</dt><dd id="detailUserName"></dd></div>
+                            <div><dt>Email</dt><dd id="detailUserEmail"></dd></div>
+                            <div><dt>Role</dt><dd id="detailUserRole"></dd></div>
+                        </dl>
+                    </div>
+                </section>
+
+                <section id="postDetailView" class="hidden" aria-labelledby="postDetailTitle">
+                    <div class="card detail-card">
+                        <button type="button" class="btn back-btn" onclick="showView('posts')">Back to Posts</button>
+                        <h2 id="postDetailTitle">Post Details</h2>
+                        <p class="detail-meta"><b>Author:</b> <span id="detailPostAuthor"></span></p>
+                        <p class="detail-meta" id="detailPostLikes"></p>
+                        <p class="post-text" id="detailPostText"></p>
+                    </div>
+                </section>
+
             </main>
         </div>
     </div>
@@ -55,6 +80,7 @@
             </div>
             <div class="row-right">
                 <span class="tag user-role"></span>
+                <button type="button" class="btn view-user-btn">View details</button>
                 <button type="button" class="btn edit-user-btn">Edit name</button>
                 <button type="button" class="btn reset-user-password-btn">Reset password</button>
             </div>
@@ -68,7 +94,10 @@
                     <b class="post-author"></b>
                     <span class="muted post-likes"></span>
                 </div>
-                <button type="button" class="btn danger delete-post-btn">Delete post</button>
+                <div class="row-right">
+                    <button type="button" class="btn view-post-btn">View details</button>
+                    <button type="button" class="btn danger delete-post-btn">Delete post</button>
+                </div>
             </div>
             <p class="post-text"></p>
         </div>

@@ -25,6 +25,7 @@ from learning_migration import initialize_learning_schema
 SESSION_COOKIE_NAME = "skilltrack_session"
 SESSION_TTL_SECONDS = 8 * 60 * 60
 RESET_TOKEN_TTL = timedelta(minutes=30)
+LOGIN_COOLDOWN_SECONDS = (30, 60, 120, 240, 480, 15 * 60)
 SESSION_SECRET = settings.SESSION_SECRET.get_secret_value().encode("utf-8")
 logger = logging.getLogger(__name__)
 
@@ -306,6 +307,25 @@ async def lifespan(app: FastAPI):
             )
             await connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS login_attempts (
+                    account_key CHAR(64) NOT NULL,
+                    client_ip TEXT NOT NULL,
+                    failed_attempts INTEGER NOT NULL DEFAULT 0
+                        CHECK (failed_attempts >= 0),
+                    locked_until TIMESTAMPTZ,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    PRIMARY KEY (account_key, client_ip)
+                )
+                """
+            )
+            await connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_login_attempts_updated_at
+                ON login_attempts (updated_at)
+                """
+            )
+            await connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS posts (
                     post_id SERIAL PRIMARY KEY,
                     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -439,15 +459,119 @@ async def login(
     db: asyncpg.Connection = Depends(get_db),
 ):
     username = payload.username.strip().casefold()
-    user = await db.fetchrow(
+    account_key = hmac.new(
+        SESSION_SECRET, username.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    client_ip = request.client.host if request.client is not None else "unknown"
+    await db.execute(
         """
-        SELECT user_id, username, password_hash, is_admin
-        FROM users WHERE lower(username) = $1
-        """,
-        username,
+        WITH expired AS (
+            SELECT ctid FROM login_attempts
+            WHERE updated_at < clock_timestamp() - interval '24 hours'
+            ORDER BY updated_at
+            LIMIT 100
+            FOR UPDATE SKIP LOCKED
+        )
+        DELETE FROM login_attempts
+        WHERE ctid IN (SELECT ctid FROM expired)
+        """
     )
-    if user is None or not verify_password(payload.password, user["password_hash"]):
+
+    cooldown_seconds = 0
+    user = None
+    login_succeeded = False
+    async with db.transaction():
+        await db.execute(
+            """
+            INSERT INTO login_attempts (account_key, client_ip)
+            VALUES ($1, $2)
+            ON CONFLICT (account_key, client_ip) DO NOTHING
+            """,
+            account_key,
+            client_ip,
+        )
+        attempt = await db.fetchrow(
+            """
+            SELECT failed_attempts,
+                   updated_at < clock_timestamp() - interval '24 hours' AS expired,
+                   CASE
+                       WHEN locked_until > clock_timestamp()
+                       THEN CEIL(EXTRACT(EPOCH FROM (
+                           locked_until - clock_timestamp()
+                       )))::INTEGER
+                       ELSE 0
+                   END AS retry_after_seconds
+            FROM login_attempts
+            WHERE account_key = $1 AND client_ip = $2
+            FOR UPDATE
+            """,
+            account_key,
+            client_ip,
+        )
+        failed_attempts = 0 if attempt["expired"] else attempt["failed_attempts"]
+        cooldown_seconds = (
+            0 if attempt["expired"] else attempt["retry_after_seconds"]
+        )
+
+        if cooldown_seconds == 0:
+            user = await db.fetchrow(
+                """
+                SELECT user_id, username, password_hash, is_admin
+                FROM users WHERE lower(username) = $1
+                """,
+                username,
+            )
+            if user is not None and verify_password(
+                payload.password, user["password_hash"]
+            ):
+                login_succeeded = True
+                await db.execute(
+                    """
+                    UPDATE login_attempts
+                    SET failed_attempts = 0, locked_until = NULL,
+                        updated_at = clock_timestamp()
+                    WHERE account_key = $1 AND client_ip = $2
+                    """,
+                    account_key,
+                    client_ip,
+                )
+            else:
+                failed_attempts += 1
+                if failed_attempts >= 3:
+                    cooldown_seconds = LOGIN_COOLDOWN_SECONDS[
+                        min(failed_attempts - 3, len(LOGIN_COOLDOWN_SECONDS) - 1)
+                    ]
+                await db.execute(
+                    """
+                    UPDATE login_attempts
+                    SET failed_attempts = $3,
+                        locked_until = CASE
+                            WHEN $4 > 0 THEN clock_timestamp()
+                                + ($4 * interval '1 second')
+                            ELSE NULL
+                        END,
+                        updated_at = clock_timestamp()
+                    WHERE account_key = $1 AND client_ip = $2
+                    """,
+                    account_key,
+                    client_ip,
+                    failed_attempts,
+                    cooldown_seconds,
+                )
+
+    if cooldown_seconds:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "Login temporarily unavailable.",
+                "retry_after_seconds": cooldown_seconds,
+            },
+            headers={"Retry-After": str(cooldown_seconds)},
+        )
+
+    if not login_succeeded:
         raise HTTPException(status_code=401, detail="Invalid username or password.")
+
     set_session_cookie(response, request, user["user_id"], user["password_hash"])
     return {
         "user_id": user["user_id"],

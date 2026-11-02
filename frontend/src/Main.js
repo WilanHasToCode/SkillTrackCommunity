@@ -16,10 +16,63 @@ const cancelResetBtn = document.getElementById('cancelResetBtn');
 const resetMessage = document.getElementById('resetMessage');
 
 let isLoginMode = true;
+let loginCooldownUntil = 0;
+let loginCooldownTimer = null;
 
 function showError(message) {
     errorBox.textContent = message;
     errorBox.style.display = 'block';
+}
+
+function formatCooldown(seconds) {
+    if (seconds >= 60) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (remainingSeconds === 0) {
+            return minutes + (minutes === 1 ? " minute" : " minutes");
+        }
+        return minutes + (minutes === 1 ? " minute " : " minutes ") +
+            remainingSeconds + (remainingSeconds === 1 ? " second" : " seconds");
+    }
+    return seconds + (seconds === 1 ? " second" : " seconds");
+}
+
+function updateLoginCooldown() {
+    const remaining = Math.max(0, Math.ceil((loginCooldownUntil - Date.now()) / 1000));
+    submitBtn.disabled = isLoginMode && remaining > 0;
+    if (!isLoginMode) {
+        if (remaining === 0 && loginCooldownUntil) {
+            loginCooldownUntil = 0;
+            if (loginCooldownTimer) {
+                clearInterval(loginCooldownTimer);
+                loginCooldownTimer = null;
+            }
+        }
+        return;
+    }
+
+    if (remaining > 0) {
+        errorBox.textContent = "Login temporarily unavailable. Try again in " +
+            formatCooldown(remaining) + ".";
+        errorBox.style.display = 'block';
+    } else if (loginCooldownUntil) {
+        loginCooldownUntil = 0;
+        errorBox.textContent = "You can try logging in now.";
+        errorBox.style.display = 'block';
+        if (loginCooldownTimer) {
+            clearInterval(loginCooldownTimer);
+            loginCooldownTimer = null;
+        }
+    }
+}
+
+function startLoginCooldown(seconds) {
+    loginCooldownUntil = Date.now() + seconds * 1000;
+    if (loginCooldownTimer) {
+        clearInterval(loginCooldownTimer);
+    }
+    updateLoginCooldown();
+    loginCooldownTimer = setInterval(updateLoginCooldown, 1000);
 }
 
 // Switch to Login View
@@ -34,6 +87,7 @@ loginTab.addEventListener('click', () => {
     resetRequestBox.classList.add('hidden');
     emailGroup.classList.add('hidden');
     errorBox.style.display = 'none';
+    updateLoginCooldown();
 });
 
 // Switch to Register (Sign Up) View
@@ -48,6 +102,7 @@ signupTab.addEventListener('click', () => {
     resetRequestBox.classList.add('hidden');
     emailGroup.classList.remove('hidden');
     errorBox.style.display = 'none';
+    updateLoginCooldown();
 });
 
 forgotLink.addEventListener('click', (event) => {
@@ -140,9 +195,13 @@ submitBtn.addEventListener('click', async () => {
         localStorage.setItem("currentUserId", String(account.user_id));
         window.location.href = "pages/DashBoard/Dashboard.html";
     } catch (error) {
-        errorBox.textContent = error.message;
-        errorBox.style.display = 'block';
+        if (isLoginMode && error.retryAfterSeconds) {
+            startLoginCooldown(error.retryAfterSeconds);
+        } else {
+            errorBox.textContent = error.message;
+            errorBox.style.display = 'block';
+        }
     } finally {
-        submitBtn.disabled = false;
+        updateLoginCooldown();
     }
 });

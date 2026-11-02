@@ -46,7 +46,7 @@ button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
 /* ----- Cards and buttons ----- */
 .card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.row-right { display: flex; align-items: center; gap: 10px; }
+.row-right { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .muted { font-size: 13px; color: #6b7280; margin-top: 2px; }
 .btn { background: #1f2937; color: #fff; padding: 8px 14px; border-radius: 5px; }
 .btn:hover { opacity: 0.9; }
@@ -71,6 +71,8 @@ button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
 .sidebar .nav-btn:last-child { margin-top:auto; }
 .top-bar { min-height:82px; padding:18px clamp(22px,4vw,52px); background:var(--paper); color:var(--navy); border:0; border-bottom:1px solid var(--line); }
 .top-bar h1 { color:var(--navy); font-size:clamp(22px,3vw,29px); letter-spacing:-.025em; }
+.top-actions { display:flex; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:12px; }
+.back-dashboard { text-decoration:none; white-space:nowrap; }
 .admin-tag { border:1px solid #b9c9ee; background:#edf3ff; color:var(--blue-dark); }
 .main { max-width:1000px; padding:34px clamp(22px,4vw,52px) 56px; }
 .card { border:1px solid rgba(23,38,61,.08); border-radius:14px; box-shadow:0 8px 28px rgba(31,48,76,.07); }
@@ -81,7 +83,7 @@ button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
 .btn.danger { background:#b84a40; }
 #adminAccessError { border-left:4px solid var(--coral); color:#8d3029; }
 @media (max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;padding:14px 18px}.logo{width:42px;height:42px;margin:0 8px 0 0}.role-label{margin:0 10px 0 0}.nav-btn{width:auto}.sidebar .nav-btn:last-child{margin-top:0}}
-@media (max-width:600px){.top-bar{min-height:72px;padding:16px 18px}.main{padding:22px 16px 40px}.row{align-items:flex-start;flex-direction:column}.nav-btn{flex:1 1 auto;justify-content:center;text-align:center}}
+@media (max-width:600px){.top-bar{min-height:72px;padding:16px 18px;align-items:flex-start;flex-wrap:wrap;gap:12px}.top-actions{justify-content:flex-start}.main{padding:22px 16px 40px}.row{align-items:flex-start;flex-direction:column}.nav-btn{flex:1 1 auto;justify-content:center;text-align:center}}
 
 /* Desktop administration presentation */
 .content { background:var(--cream); }
@@ -97,3 +99,11 @@ button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
 .tag { align-self:center; padding:5px 11px; }
 .post-text { max-width:78ch; color:var(--ink); }
 .btn { min-height:36px; }
+.detail-card { display:grid; justify-items:start; gap:18px; }
+.back-btn { background:var(--blue-dark); }
+.detail-card h2 { color:var(--navy); font-size:20px; }
+.detail-fields { display:grid; gap:14px; width:100%; }
+.detail-fields dt { color:var(--muted); font-size:13px; font-weight:700; }
+.detail-fields dd { margin-top:3px; color:var(--navy); overflow-wrap:anywhere; }
+.detail-meta { color:var(--ink); }
+.detail-meta b { color:var(--navy); }

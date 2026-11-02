@@ -88,10 +88,14 @@ async function loadPosts() {
 }
 
 async function loadAccountNavigation() {
+    var adminNav = document.getElementById("adminNav");
+    adminNav.hidden = true;
+    adminNav.classList.add("hidden");
     try {
         var account = await apiRequest("/auth/me");
-        if (account.is_admin) {
-            document.getElementById("adminNav").classList.remove("hidden");
+        if (account.is_admin === true) {
+            adminNav.hidden = false;
+            adminNav.classList.remove("hidden");
         }
     } catch (error) {
         if (error.status === 401) {

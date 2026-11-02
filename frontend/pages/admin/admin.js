@@ -11,6 +11,9 @@ function showUsers() {
         card.querySelector(".user-name").textContent = user.username;
         card.querySelector(".user-email").textContent = user.email;
         card.querySelector(".user-role").textContent = user.is_admin ? "Admin" : "Member";
+        card.querySelector(".view-user-btn").addEventListener("click", function () {
+            showUserDetail(user);
+        });
         card.querySelector(".edit-user-btn").addEventListener("click", function () {
             editUserName(user);
         });
@@ -33,6 +36,9 @@ function showPosts() {
         card.querySelector(".post-author").textContent = post.author;
         card.querySelector(".post-likes").textContent = (post.likes || 0) + " likes";
         card.querySelector(".post-text").textContent = post.text;
+        card.querySelector(".view-post-btn").addEventListener("click", function () {
+            showPostDetail(post);
+        });
         card.querySelector(".delete-post-btn").addEventListener("click", function () {
             deletePost(post);
         });
@@ -46,9 +52,37 @@ function showView(name) {
     var showingUsers = name === "users";
     document.getElementById("usersView").className = showingUsers ? "" : "hidden";
     document.getElementById("postsView").className = showingUsers ? "hidden" : "";
+    document.getElementById("userDetailView").className = "hidden";
+    document.getElementById("postDetailView").className = "hidden";
     document.getElementById("navUsers").className = showingUsers ? "nav-btn active" : "nav-btn";
     document.getElementById("navPosts").className = showingUsers ? "nav-btn" : "nav-btn active";
     document.getElementById("pageTitle").textContent = showingUsers ? "Member Accounts" : "Public Posts";
+}
+
+function showUserDetail(user) {
+    document.getElementById("usersView").className = "hidden";
+    document.getElementById("postsView").className = "hidden";
+    document.getElementById("userDetailView").className = "";
+    document.getElementById("postDetailView").className = "hidden";
+    document.getElementById("navUsers").className = "nav-btn active";
+    document.getElementById("navPosts").className = "nav-btn";
+    document.getElementById("pageTitle").textContent = "Member Details";
+    document.getElementById("detailUserName").textContent = user.username;
+    document.getElementById("detailUserEmail").textContent = user.email;
+    document.getElementById("detailUserRole").textContent = user.is_admin ? "Admin" : "Member";
+}
+
+function showPostDetail(post) {
+    document.getElementById("usersView").className = "hidden";
+    document.getElementById("postsView").className = "hidden";
+    document.getElementById("userDetailView").className = "hidden";
+    document.getElementById("postDetailView").className = "";
+    document.getElementById("navUsers").className = "nav-btn";
+    document.getElementById("navPosts").className = "nav-btn active";
+    document.getElementById("pageTitle").textContent = "Post Details";
+    document.getElementById("detailPostAuthor").textContent = post.author;
+    document.getElementById("detailPostLikes").textContent = (post.likes || 0) + " likes";
+    document.getElementById("detailPostText").textContent = post.text;
 }
 
 async function initializeAdmin() {
@@ -122,6 +156,9 @@ async function deletePost(post) {
         await apiRequest("/admin/posts/" + post.id, { method: "DELETE" });
         posts = posts.filter(function (item) { return item.id !== post.id; });
         showPosts();
+        if (!document.getElementById("postDetailView").classList.contains("hidden")) {
+            showView("posts");
+        }
     } catch (error) {
         showAdminError(error.message);
     }

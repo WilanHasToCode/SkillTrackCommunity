@@ -42,6 +42,17 @@ function formatApiError(data) {
         return safeMessages.includes(detail) ? detail : fallback;
     }
 
+    if (
+        detail &&
+        typeof detail === "object" &&
+        detail.message === "Login temporarily unavailable." &&
+        Number.isInteger(detail.retry_after_seconds) &&
+        detail.retry_after_seconds > 0
+    ) {
+        return "Login temporarily unavailable. Try again in " +
+            detail.retry_after_seconds + " seconds.";
+    }
+
     if (Array.isArray(detail)) {
         const fieldNames = {
             username: "Username",
@@ -109,6 +120,13 @@ async function apiRequest(path, options) {
     if (!response.ok) {
         const error = new Error(formatApiError(data));
         error.status = response.status;
+        if (
+            data.detail &&
+            Number.isInteger(data.detail.retry_after_seconds) &&
+            data.detail.retry_after_seconds > 0
+        ) {
+            error.retryAfterSeconds = data.detail.retry_after_seconds;
+        }
         throw error;
     }
 
