@@ -53,7 +53,11 @@
                 <b class="user-name"></b>
                 <div class="muted user-email"></div>
             </div>
-            <span class="tag user-role"></span>
+            <div class="row-right">
+                <span class="tag user-role"></span>
+                <button type="button" class="btn edit-user-btn">Edit name</button>
+                <button type="button" class="btn reset-user-password-btn">Reset password</button>
+            </div>
         </div>
     </template>
 
@@ -64,6 +68,7 @@
                     <b class="post-author"></b>
                     <span class="muted post-likes"></span>
                 </div>
+                <button type="button" class="btn danger delete-post-btn">Delete post</button>
             </div>
             <p class="post-text"></p>
         </div>

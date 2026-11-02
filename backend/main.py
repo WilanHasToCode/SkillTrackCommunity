@@ -88,6 +88,11 @@ class ProfileUpdateRequest(BaseModel):
     new_password: str | None = Field(default=None, min_length=12, max_length=128)
 
 
+class AdminUserUpdateRequest(BaseModel):
+    username: str | None = Field(default=None, min_length=1, max_length=50)
+    new_password: str | None = Field(default=None, min_length=12, max_length=128)
+
+
 class PasswordResetRequest(BaseModel):
     email: str = Field(min_length=3, max_length=100)
 
@@ -684,6 +689,74 @@ async def update_user_profile(
         "username": updated_user["username"],
         "email": updated_user["email"],
     }
+
+
+@app.patch("/admin/users/{user_id}")
+async def admin_update_user(
+    user_id: int,
+    payload: AdminUserUpdateRequest,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(require_admin),
+):
+    if payload.username is None and payload.new_password is None:
+        raise HTTPException(status_code=422, detail="Provide a username or new password.")
+
+    user = await db.fetchrow(
+        "SELECT user_id, username, email, password_hash FROM users WHERE user_id = $1", user_id
+    )
+    if user is None:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    username = user["username"]
+    if payload.username is not None:
+        username = payload.username.strip().casefold()
+        if not username:
+            raise HTTPException(status_code=422, detail="Username cannot be empty.")
+        duplicate = await db.fetchrow(
+            "SELECT user_id FROM users WHERE lower(username) = $1 AND user_id <> $2",
+            username,
+            user_id,
+        )
+        if duplicate is not None:
+            raise HTTPException(status_code=409, detail="That username is already registered.")
+
+    password_hash = (
+        hash_password(payload.new_password)
+        if payload.new_password is not None
+        else user["password_hash"]
+    )
+    updated = await db.fetchrow(
+        """
+        UPDATE users SET username = $1, password_hash = CASE
+            WHEN $2::text IS NULL THEN password_hash ELSE $2 END
+        WHERE user_id = $3
+        RETURNING user_id, username, email, is_admin
+        """,
+        username,
+        password_hash,
+        user_id,
+    )
+    return {
+        "user_id": updated["user_id"],
+        "username": updated["username"],
+        "email": updated["email"],
+        "is_admin": updated["is_admin"],
+    }
+
+
+@app.delete("/admin/posts/{post_id}")
+async def admin_delete_post(
+    post_id: int,
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(require_admin),
+):
+    deleted = await db.fetchrow(
+        "DELETE FROM posts WHERE post_id = $1 AND is_draft = FALSE RETURNING post_id",
+        post_id,
+    )
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    return {"status": "deleted", "post_id": deleted["post_id"]}
 
 
 @app.get("/skills")
@@ -1430,6 +1503,40 @@ async def get_posts(
             "text": row["content"] or "",
             "likes": row["likes"],
             "liked": row["liked"],
+        }
+        for row in rows
+    ]
+
+
+@app.get("/notifications/likes")
+async def get_like_notifications(
+    db: asyncpg.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    rows = await db.fetch(
+        """
+        SELECT interaction.post_id,
+               liker.user_id AS liker_id,
+               liker.username AS liker_name,
+               post.content AS post_context
+        FROM interactions AS interaction
+        JOIN users AS liker ON liker.user_id = interaction.user_id
+        JOIN posts AS post ON post.post_id = interaction.post_id
+        WHERE post.user_id = $1
+          AND interaction.user_id <> $1
+          AND post.is_draft = FALSE
+        ORDER BY interaction.post_id DESC,
+                 interaction.user_id DESC
+        LIMIT 50
+        """,
+        current_user["user_id"],
+    )
+    return [
+        {
+            "post_id": row["post_id"],
+            "liker_id": row["liker_id"],
+            "liker_name": row["liker_name"],
+            "post_context": row["post_context"] or "",
         }
         for row in rows
     ]

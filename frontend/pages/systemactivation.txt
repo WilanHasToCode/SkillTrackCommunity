@@ -1,0 +1,8 @@
+
+=======================
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn main:app --reload
+=======================
+.\venv\Scripts\python.exe -m uvicorn main:app --reload
+======================

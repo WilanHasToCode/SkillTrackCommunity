@@ -5,6 +5,7 @@ document.getElementById("avatar").textContent = username.charAt(0).toUpperCase()
 
 var posts = [];
 var editingId = null;
+var likeNotifications = [];
 
 // Makes text safe to show on the page
 function makeSafe(text) {
@@ -37,7 +38,7 @@ function showPosts() {
             likedClass = " liked";
         }
 
-        html += '<div class="card">';
+        html += '<div class="card" id="post-' + post.id + '">';
         html += '<div class="post-top">';
         html += '<div class="post-avatar">' + makeSafe(post.author.charAt(0).toUpperCase()) + '</div>';
         html += '<div><b>' + makeSafe(post.author) + '</b><div class="post-time">' + makeSafe(post.time) + '</div></div>';
@@ -197,10 +198,85 @@ async function savePost() {
     }
 }
 
-// Bell button: removes the red dot
-function clearBell() {
-    document.getElementById("dot").style.display = "none";
+function openNotificationPost(postId) {
+    closeNotifications();
+    var post = document.getElementById("post-" + postId);
+    if (post) {
+        post.scrollIntoView({ behavior: "smooth", block: "center" });
+        post.tabIndex = -1;
+        post.focus({ preventScroll: true });
+    }
 }
+
+function renderNotifications() {
+    var list = document.getElementById("notificationList");
+    list.innerHTML = "";
+
+    if (likeNotifications.length === 0) {
+        var empty = document.createElement("p");
+        empty.className = "notification-empty";
+        empty.textContent = "No one has liked your posts yet.";
+        list.appendChild(empty);
+        return;
+    }
+
+    likeNotifications.forEach(function (notification) {
+        var item = document.createElement("a");
+        item.href = "#post-" + notification.post_id;
+        item.className = "notification-item";
+
+        var name = document.createElement("strong");
+        name.textContent = notification.liker_name + " liked your post";
+
+        var context = document.createElement("span");
+        context.className = "notification-context";
+        context.textContent = notification.post_context || "Post " + notification.post_id;
+
+        item.appendChild(name);
+        item.appendChild(context);
+        item.addEventListener("click", function (event) {
+            event.preventDefault();
+            openNotificationPost(notification.post_id);
+        });
+        list.appendChild(item);
+    });
+}
+
+async function loadNotifications() {
+    var list = document.getElementById("notificationList");
+    list.innerHTML = '<p class="notification-empty">Loading notifications…</p>';
+
+    try {
+        likeNotifications = await apiRequest("/notifications/likes");
+        renderNotifications();
+        document.getElementById("dot").style.display = likeNotifications.length > 0 ? "block" : "none";
+    } catch (error) {
+        document.getElementById("dot").style.display = "none";
+        list.innerHTML = '<p class="notification-error">Could not load notifications. Please try again.</p>';
+    }
+}
+
+function toggleNotifications() {
+    var panel = document.getElementById("notificationPanel");
+    var bell = document.getElementById("bell");
+    var opening = panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", !opening);
+    bell.setAttribute("aria-expanded", opening ? "true" : "false");
+    if (opening) {
+        loadNotifications();
+        document.getElementById("dot").style.display = "none";
+    }
+}
+
+function closeNotifications() {
+    document.getElementById("notificationPanel").classList.add("hidden");
+    document.getElementById("bell").setAttribute("aria-expanded", "false");
+}
+
+document.getElementById("bell").addEventListener("click", toggleNotifications);
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeNotifications();
+});
 
 // Log Out: forget the user and go back to the login page
 async function logOut() {

@@ -11,6 +11,12 @@ function showUsers() {
         card.querySelector(".user-name").textContent = user.username;
         card.querySelector(".user-email").textContent = user.email;
         card.querySelector(".user-role").textContent = user.is_admin ? "Admin" : "Member";
+        card.querySelector(".edit-user-btn").addEventListener("click", function () {
+            editUserName(user);
+        });
+        card.querySelector(".reset-user-password-btn").addEventListener("click", function () {
+            resetUserPassword(user);
+        });
         list.appendChild(card);
     });
 
@@ -27,6 +33,9 @@ function showPosts() {
         card.querySelector(".post-author").textContent = post.author;
         card.querySelector(".post-likes").textContent = (post.likes || 0) + " likes";
         card.querySelector(".post-text").textContent = post.text;
+        card.querySelector(".delete-post-btn").addEventListener("click", function () {
+            deletePost(post);
+        });
         list.appendChild(card);
     });
 
@@ -67,6 +76,61 @@ async function initializeAdmin() {
         accessError.textContent = "Could not load admin data: " + error.message;
         accessError.className = "card";
     }
+}
+
+async function editUserName(user) {
+    var username = window.prompt("Enter a new username:", user.username);
+    if (username === null) return;
+    username = username.trim();
+    if (!username) {
+        showAdminError("Username cannot be empty.");
+        return;
+    }
+    try {
+        var updated = await apiRequest("/admin/users/" + user.user_id, {
+            method: "PATCH",
+            body: JSON.stringify({ username: username })
+        });
+        user.username = updated.username;
+        showUsers();
+    } catch (error) {
+        showAdminError(error.message);
+    }
+}
+
+async function resetUserPassword(user) {
+    var password = window.prompt("Enter a new password of at least 12 characters:");
+    if (password === null) return;
+    if (password.length < 12) {
+        showAdminError("Password must be at least 12 characters.");
+        return;
+    }
+    try {
+        await apiRequest("/admin/users/" + user.user_id, {
+            method: "PATCH",
+            body: JSON.stringify({ new_password: password })
+        });
+        showAdminError("Password reset for " + user.username + ".");
+    } catch (error) {
+        showAdminError(error.message);
+    }
+}
+
+async function deletePost(post) {
+    if (!window.confirm("Delete this public post? This cannot be undone.")) return;
+    try {
+        await apiRequest("/admin/posts/" + post.id, { method: "DELETE" });
+        posts = posts.filter(function (item) { return item.id !== post.id; });
+        showPosts();
+    } catch (error) {
+        showAdminError(error.message);
+    }
+}
+
+function showAdminError(message) {
+    var box = document.getElementById("adminAccessError");
+    box.textContent = message;
+    box.className = "card";
 }
 
 async function logOut() {
