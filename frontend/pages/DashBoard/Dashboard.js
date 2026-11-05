@@ -1,11 +1,11 @@
 // ----- Who is logged in? -----
 var username = localStorage.getItem("currentUser") || "Member";
-var userId = Number(localStorage.getItem("currentUserId"));
 document.getElementById("profileName").textContent = "Username: " + username;
 document.getElementById("avatar").textContent = username.charAt(0).toUpperCase();
 
 var posts = [];
 var editingId = null;
+var likeNotifications = [];
 
 // Makes text safe to show on the page
 function makeSafe(text) {
@@ -38,7 +38,7 @@ function showPosts() {
             likedClass = " liked";
         }
 
-        html += '<div class="card">';
+        html += '<div class="card" id="post-' + post.id + '">';
         html += '<div class="post-top">';
         html += '<div class="post-avatar">' + makeSafe(post.author.charAt(0).toUpperCase()) + '</div>';
         html += '<div><b>' + makeSafe(post.author) + '</b><div class="post-time">' + makeSafe(post.time) + '</div></div>';
@@ -73,8 +73,8 @@ function mapPost(post) {
         author: post.author,
         time: post.time || (post.created_at ? formatPostTime(post.created_at) : "Community post"),
         text: post.text,
-        likes: 0,
-        liked: false
+        likes: post.likes || 0,
+        liked: post.liked === true
     };
 }
 
@@ -84,6 +84,25 @@ async function loadPosts() {
         showPosts();
     } catch (error) {
         showToast("Could not load posts: " + error.message);
+    }
+}
+
+async function loadAccountNavigation() {
+    var adminNav = document.getElementById("adminNav");
+    adminNav.hidden = true;
+    adminNav.classList.add("hidden");
+    try {
+        var account = await apiRequest("/auth/me");
+        if (account.is_admin === true) {
+            adminNav.hidden = false;
+            adminNav.classList.remove("hidden");
+        }
+    } catch (error) {
+        if (error.status === 401) {
+            window.location.replace("../../Main.html");
+            return;
+        }
+        showToast("Could not verify account access: " + error.message);
     }
 }
 
@@ -100,16 +119,22 @@ function findPost(id) {
 // ----- Buttons -----
 
 // Like Post? Click once to like, click again to unlike
-function likePost(id) {
+async function likePost(id) {
     var post = findPost(id);
-    if (post.liked === true) {
-        post.liked = false;
-        post.likes = post.likes - 1;
-    } else {
-        post.liked = true;
-        post.likes = post.likes + 1;
+    if (!post) {
+        return;
     }
-    showPosts();
+
+    try {
+        var result = await apiRequest("/posts/" + id + "/like", {
+            method: post.liked ? "DELETE" : "PUT"
+        });
+        post.liked = result.liked;
+        post.likes = result.likes;
+        showPosts();
+    } catch (error) {
+        showToast("Could not update like: " + error.message);
+    }
 }
 
 // Create Post button: opens the empty post box
@@ -147,17 +172,12 @@ async function savePost() {
         return;
     }
 
-    if (!Number.isInteger(userId) || userId < 1) {
-        showToast("Please log in again before posting.");
-        return;
-    }
-
     var postBtn = document.getElementById("postBtn");
     postBtn.disabled = true;
     try {
         var savedPost = await apiRequest(editingId === null ? "/posts" : "/posts/" + editingId, {
             method: editingId === null ? "POST" : "PUT",
-            body: JSON.stringify({ user_id: userId, content: text })
+            body: JSON.stringify({ content: text })
         });
         if (editingId === null) {
             savedPost.time = "Just now";
@@ -167,6 +187,8 @@ async function savePost() {
             var index = posts.findIndex(function (post) { return post.id === editingId; });
             if (index !== -1) {
                 savedPost.time = posts[index].time;
+                savedPost.likes = posts[index].likes;
+                savedPost.liked = posts[index].liked;
                 posts[index] = mapPost(savedPost);
             }
             showToast("Post updated.");
@@ -180,16 +202,94 @@ async function savePost() {
     }
 }
 
-// Bell button: removes the red dot
-function clearBell() {
-    document.getElementById("dot").style.display = "none";
+function openNotificationPost(postId) {
+    closeNotifications();
+    var post = document.getElementById("post-" + postId);
+    if (post) {
+        post.scrollIntoView({ behavior: "smooth", block: "center" });
+        post.tabIndex = -1;
+        post.focus({ preventScroll: true });
+    }
 }
 
+function renderNotifications() {
+    var list = document.getElementById("notificationList");
+    list.innerHTML = "";
+
+    if (likeNotifications.length === 0) {
+        var empty = document.createElement("p");
+        empty.className = "notification-empty";
+        empty.textContent = "No one has liked your posts yet.";
+        list.appendChild(empty);
+        return;
+    }
+
+    likeNotifications.forEach(function (notification) {
+        var item = document.createElement("a");
+        item.href = "#post-" + notification.post_id;
+        item.className = "notification-item";
+
+        var name = document.createElement("strong");
+        name.textContent = notification.liker_name + " liked your post";
+
+        var context = document.createElement("span");
+        context.className = "notification-context";
+        context.textContent = notification.post_context || "Post " + notification.post_id;
+
+        item.appendChild(name);
+        item.appendChild(context);
+        item.addEventListener("click", function (event) {
+            event.preventDefault();
+            openNotificationPost(notification.post_id);
+        });
+        list.appendChild(item);
+    });
+}
+
+async function loadNotifications() {
+    var list = document.getElementById("notificationList");
+    list.innerHTML = '<p class="notification-empty">Loading notifications…</p>';
+
+    try {
+        likeNotifications = await apiRequest("/notifications/likes");
+        renderNotifications();
+        document.getElementById("dot").style.display = likeNotifications.length > 0 ? "block" : "none";
+    } catch (error) {
+        document.getElementById("dot").style.display = "none";
+        list.innerHTML = '<p class="notification-error">Could not load notifications. Please try again.</p>';
+    }
+}
+
+function toggleNotifications() {
+    var panel = document.getElementById("notificationPanel");
+    var bell = document.getElementById("bell");
+    var opening = panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", !opening);
+    bell.setAttribute("aria-expanded", opening ? "true" : "false");
+    if (opening) {
+        loadNotifications();
+        document.getElementById("dot").style.display = "none";
+    }
+}
+
+function closeNotifications() {
+    document.getElementById("notificationPanel").classList.add("hidden");
+    document.getElementById("bell").setAttribute("aria-expanded", "false");
+}
+
+document.getElementById("bell").addEventListener("click", toggleNotifications);
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeNotifications();
+});
+
 // Log Out: forget the user and go back to the login page
-function logOut() {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("currentUserId");
-    window.location.href = "../../Main.html";
+async function logOut() {
+    try {
+        await apiLogout();
+        window.location.href = "../../Main.html";
+    } catch (error) {
+        showToast("Could not log out: " + error.message);
+    }
 }
 
 // Restore a message shared from the skills page.
@@ -201,3 +301,4 @@ if (draft !== null) {
 }
 
 loadPosts();
+loadAccountNavigation();

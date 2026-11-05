@@ -17,6 +17,7 @@
             <a href="Dashboard.html" class="nav-btn active">Dashboard</a>
             <a href="../profiles/profiles.html" class="nav-btn">Profile</a>
             <a href="../skills/skills.html" class="nav-btn">Skills Directory</a>
+            <a href="../admin/admin.html" class="nav-btn hidden" id="adminNav" hidden>Admin</a>
             <button class="nav-btn" onclick="logOut()">Log Out</button>
         </aside>
 
@@ -26,9 +27,22 @@
             <header class="top-bar">
                 <h1>Community Dashboard</h1>
                 <div class="top-right">
-                    <button class="bell" id="bell" onclick="clearBell()" aria-label="Notifications">
-                        🔔<span class="dot" id="dot"></span>
-                    </button>
+                    <div class="notification-anchor">
+                        <button type="button" class="bell" id="bell" aria-label="Notifications" aria-controls="notificationPanel" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                                <path d="M10 21h4"></path>
+                            </svg>
+                            <span class="dot" id="dot"></span>
+                        </button>
+                        <section class="notification-panel hidden" id="notificationPanel" aria-label="Like notifications">
+                            <div class="notification-heading">
+                                <h2>Notifications</h2>
+                                <button type="button" class="notification-close" onclick="closeNotifications()" aria-label="Close notifications">×</button>
+                            </div>
+                            <div id="notificationList" class="notification-list"></div>
+                        </section>
+                    </div>
                     <div class="avatar" id="avatar">M</div>
                 </div>
             </header>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillTrack - Admin</title>
+    <!-- Link CSS file -->
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">AD</div>
+            <p class="role-label">ADMIN</p>
+            <button class="nav-btn active" id="navUsers" onclick="showView('users')">
+                Member Accounts
+            </button>
+            <button class="nav-btn" id="navPosts" onclick="showView('posts')">Public Posts</button>
+            <button class="nav-btn" onclick="logOut()">Log Out</button>
+        </aside>
+
+        <div class="content">
+
+            <!-- Top bar -->
+            <header class="top-bar">
+                <h1 id="pageTitle">Member Accounts</h1>
+                <div class="top-actions">
+                    <a class="btn back-dashboard" href="../DashBoard/Dashboard.html">Back to Dashboard</a>
+                    <span class="admin-tag">Admin account</span>
+                </div>
+            </header>
+
+            <main class="main">
+                <div class="card hidden" id="adminAccessError" role="alert"></div>
+
+                <section id="usersView">
+                    <div id="userList"></div>
+                    <div class="card hidden" id="noUsers">No member accounts.</div>
+                </section>
+
+                <section id="postsView" class="hidden">
+                    <div id="postList"></div>
+                    <div class="card hidden" id="noPosts">No public posts.</div>
+                </section>
+
+                <section id="userDetailView" class="hidden" aria-labelledby="userDetailTitle">
+                    <div class="card detail-card">
+                        <button type="button" class="btn back-btn" onclick="showView('users')">Back to Users</button>
+                        <h2 id="userDetailTitle">Member Details</h2>
+                        <dl class="detail-fields">
+                            <div><dt>Username</dt><dd id="detailUserName"></dd></div>
+                            <div><dt>Email</dt><dd id="detailUserEmail"></dd></div>
+                            <div><dt>Role</dt><dd id="detailUserRole"></dd></div>
+                        </dl>
+                    </div>
+                </section>
+
+                <section id="postDetailView" class="hidden" aria-labelledby="postDetailTitle">
+                    <div class="card detail-card">
+                        <button type="button" class="btn back-btn" onclick="showView('posts')">Back to Posts</button>
+                        <h2 id="postDetailTitle">Post Details</h2>
+                        <p class="detail-meta"><b>Author:</b> <span id="detailPostAuthor"></span></p>
+                        <p class="detail-meta" id="detailPostLikes"></p>
+                        <p class="post-text" id="detailPostText"></p>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <template id="userTemplate">
+        <div class="card row">
+            <div>
+                <b class="user-name"></b>
+                <div class="muted user-email"></div>
+            </div>
+            <div class="row-right">
+                <span class="tag user-role"></span>
+                <button type="button" class="btn view-user-btn">View details</button>
+                <button type="button" class="btn edit-user-btn">Edit name</button>
+                <button type="button" class="btn reset-user-password-btn">Reset password</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="postTemplate">
+        <div class="card">
+            <div class="row">
+                <div>
+                    <b class="post-author"></b>
+                    <span class="muted post-likes"></span>
+                </div>
+                <div class="row-right">
+                    <button type="button" class="btn view-post-btn">View details</button>
+                    <button type="button" class="btn danger delete-post-btn">Delete post</button>
+                </div>
+            </div>
+            <p class="post-text"></p>
+        </div>
+    </template>
+
+    <!-- Link JavaScript file -->
+    <script src="../../src/api.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

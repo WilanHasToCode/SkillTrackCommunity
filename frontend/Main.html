@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillTrack - Login / Register</title>
+    <!-- Link CSS file -->
+    <link rel="stylesheet" href="src/Main.css">
+</head>
+<body>
+
+    <main class="auth-container">
+        <section class="auth-brand" aria-label="SkillTrackCommunity">
+            <div>
+                <div class="brand-mark" aria-hidden="true">ST</div>
+                <h1>Build skills.<br>Find your people.</h1>
+                <p>Learn together, share progress, and turn curiosity into practical skills.</p>
+            </div>
+        </section>
+
+        <section class="auth-form">
+            <h2>Welcome back</h2>
+            <p class="auth-subtitle" id="authSubtitle">Your learning community is ready.</p>
+
+            <!-- Error Message  -->
+            <div class="error-box" id="errorBox" role="alert">
+                Invalid username or password. Please try again.
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-buttons" aria-label="Account actions">
+                <button class="tab-btn active" id="loginTab" type="button">Log In</button>
+                <button class="tab-btn" id="signupTab" type="button">Sign Up</button>
+            </div>
+
+            <!-- Login Form  -->
+            <div class="input-group">
+                <label id="usernameLabel" for="userInput">Username</label>
+                <input type="text" id="userInput" placeholder="Type Username" autocomplete="username">
+            </div>
+
+            <div class="input-group hidden" id="emailGroup">
+                <label for="emailInput">Email</label>
+                <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+            </div>
+
+            <div class="input-group">
+                <label for="passInput">Password</label>
+                <input type="password" id="passInput" placeholder="Password" autocomplete="current-password">
+            </div>
+
+            <button class="btn-submit" id="submitBtn" type="button">Log In</button>
+
+            <a href="#" class="forgot-link" id="forgotLink">Forgot Password?</a>
+
+            <div class="input-group hidden" id="resetRequestBox">
+                <label for="resetEmailInput">Account email</label>
+                <input id="resetEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
+                <button class="btn-submit" id="requestResetBtn" type="button">Send reset link</button>
+                <button class="btn-submit" id="cancelResetBtn" type="button">Back to login</button>
+                <p class="error-box" id="resetMessage" role="status" aria-live="polite"></p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Link JavaScript  Mainfile -->
+    <script src="src/api.js"></script>
+    <script src="src/Main.js"></script>
+</body>
+</html>
